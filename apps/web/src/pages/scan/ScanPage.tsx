@@ -1,9 +1,14 @@
 import { useState } from "react";
 import CameraCapture from "../../components/camera/CameraCapture";
 import ImageUpload from "../../components/camera/ImageUpload";
+import { sendImageForOCR } from "../../features/ocr/ocr.service";
+
 
 export default function ScanPage() {
   const [image, setImage] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] gap-6 px-4">
@@ -25,15 +30,39 @@ export default function ScanPage() {
           />
 
           <button
-            disabled
-            className="px-6 py-3 rounded bg-blue-600 opacity-50 cursor-not-allowed"
+            onClick={async () => {
+              if (!image) return;
+              setLoading(true);
+              setError(null);
+              setText("");
+              try {
+                const extracted = await sendImageForOCR(image);
+                setText(extracted);
+              } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : "OCR failed. Please try again.";
+                setError(errorMessage);
+                console.error("OCR failed:", err);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            className="px-6 py-3 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Analyze (OCR coming next)
+            {loading ? "Analyzing…" : "Analyze"}
           </button>
 
-          <p className="text-sm text-neutral-400">
-            Image captured successfully. Analysis will start in the next phase.
-          </p>
+          {error && (
+            <div className="mt-4 max-w-xl p-4 bg-red-900/50 border border-red-700 rounded text-red-200">
+              Error: {error}
+            </div>
+          )}
+
+          {text && (
+            <pre className="mt-4 max-w-xl p-4 bg-neutral-900 rounded whitespace-pre-wrap text-white">
+              {text}
+            </pre>
+          )}
 
           <button
             onClick={() => setImage(null)}
