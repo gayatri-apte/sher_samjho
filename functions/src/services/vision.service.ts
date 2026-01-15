@@ -1,6 +1,8 @@
 import vision from "@google-cloud/vision";
 
-const client = new vision.ImageAnnotatorClient();
+const client = new vision.ImageAnnotatorClient({
+  projectId: process.env.GCLOUD_PROJECT || "internship-8cf33",
+});
 
 /**
  * Extracts text from an image buffer using Google Vision API
@@ -9,16 +11,23 @@ const client = new vision.ImageAnnotatorClient();
  * @return {Promise<string>} Extracted text
  */
 export async function extractTextFromImage(buffer: Buffer): Promise<string> {
-  const [result] = await client.textDetection({
-    image: {content: buffer},
-  });
+  try {
+    const [result] = await client.textDetection({
+      image: {content: buffer},
+    });
 
-  const detections = result.textAnnotations;
-  if (!detections || detections.length === 0) {
-    return "";
+    const detections = result.textAnnotations;
+    if (!detections || detections.length === 0) {
+      return "";
+    }
+
+    return detections[0].description || "";
+  } catch (error) {
+    console.error("Vision API error:", error);
+    const errorMsg =
+      error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Vision API failed: ${errorMsg}`);
   }
-
-  return detections[0].description || "";
 }
 
 /**

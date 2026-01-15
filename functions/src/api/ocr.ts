@@ -20,7 +20,12 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
 
     res.json({text});
   } catch (error) {
-    console.error(error);
-    res.status(500).json({error: "OCR failed"});
+    console.error("OCR error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({
+      error: "OCR failed",
+      message: errorMessage,
+    });
   }
 }
