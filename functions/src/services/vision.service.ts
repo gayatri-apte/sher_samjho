@@ -1,7 +1,31 @@
 import vision from "@google-cloud/vision";
+import * as admin from "firebase-admin";
 
+// Get the project ID from Firebase Admin (initialized in index.ts)
+// This ensures we use the correct project ID that matches Firebase Functions
+const getProjectId = (): string => {
+  // Try to get from Firebase Admin first
+  try {
+    const app = admin.app();
+    if (app?.options?.projectId) {
+      return app.options.projectId;
+    }
+  } catch {
+    // Admin not initialized yet or no project ID
+  }
+
+  // Fallback to environment variables or default
+  return process.env.GCLOUD_PROJECT ||
+         process.env.GCP_PROJECT ||
+         process.env.GOOGLE_CLOUD_PROJECT ||
+         "internship-8cf33";
+};
+
+// Initialize Vision client
+// In Firebase Functions: Automatically uses Application Default Credentials
+// In local dev: Uses GOOGLE_APPLICATION_CREDENTIALS if set
 const client = new vision.ImageAnnotatorClient({
-  projectId: process.env.GCLOUD_PROJECT || "internship-8cf33",
+  projectId: getProjectId(),
 });
 
 /**

@@ -23,9 +23,13 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
     console.error("OCR error:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
+    const errorDetails = error instanceof Error ? error.stack : String(error);
+    console.error("OCR error details:", errorDetails);
     res.status(500).json({
       error: "OCR failed",
       message: errorMessage,
+      details: process.env.NODE_ENV === "development" ?
+        errorDetails : undefined,
     });
   }
 }
