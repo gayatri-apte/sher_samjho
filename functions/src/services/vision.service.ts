@@ -1,4 +1,4 @@
-import vision from "@google-cloud/vision";
+import vision, {ImageAnnotatorClient} from "@google-cloud/vision";
 import * as admin from "firebase-admin";
 
 // Get the project ID from Firebase Admin (initialized in index.ts)
@@ -21,12 +21,22 @@ const getProjectId = (): string => {
          "internship-8cf33";
 };
 
-// Initialize Vision client
-// In Firebase Functions: Automatically uses Application Default Credentials
-// In local dev: Uses GOOGLE_APPLICATION_CREDENTIALS if set
-const client = new vision.ImageAnnotatorClient({
-  projectId: getProjectId(),
-});
+let client: ImageAnnotatorClient | null = null;
+
+/**
+ * Returns a lazily-initialized Vision API client.
+ * Lazily initialized so deploy/analyze doesn't fail on import.
+ *
+ * @return {ImageAnnotatorClient} Vision ImageAnnotatorClient
+ */
+function getVisionClient(): ImageAnnotatorClient {
+  if (!client) {
+    client = new vision.ImageAnnotatorClient({
+      projectId: getProjectId(),
+    });
+  }
+  return client;
+}
 
 /**
  * Extracts text from an image buffer using Google Vision API
@@ -36,6 +46,7 @@ const client = new vision.ImageAnnotatorClient({
  */
 export async function extractTextFromImage(buffer: Buffer): Promise<string> {
   try {
+    const client = getVisionClient();
     const [result] = await client.textDetection({
       image: {content: buffer},
     });
@@ -61,6 +72,7 @@ export async function extractTextFromImage(buffer: Buffer): Promise<string> {
  * @return {Promise<string>} Extracted text
  */
 export async function detectText(imagePath: string): Promise<string> {
+  const client = getVisionClient();
   const [result] = await client.textDetection(imagePath);
 
   const detections = result.textAnnotations;

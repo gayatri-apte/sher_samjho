@@ -1,29 +1,39 @@
-export async function sendImageForOCR(file: File): Promise<string> {
-    const base64 = await fileToBase64(file);
-  
-    const res = await fetch(
-      "https://us-central1-internship-8cf33.cloudfunctions.net/api/ocr",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64 }),
-      }
-    );
+import { api } from "../../config/api";
+import { auth } from "../../services/firebase";
 
-    if (!res.ok) {
-      throw new Error(`OCR request failed: ${res.status} ${res.statusText}`);
+export async function sendImageForOCR(file: File): Promise<string> {
+  const base64 = await fileToBase64(file);
+  const token = await auth.currentUser?.getIdToken();
+
+  const res = await fetch(api.ocr,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ image: base64 }),
     }
-  
-    const data = await res.json();
-    return data.text;
+  );
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage =
+      errorData.message ||
+      errorData.error ||
+      `HTTP ${res.status}: ${res.statusText}`;
+    throw new Error(`OCR request failed: ${errorMessage}`);
   }
-  
-  function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () =>
-        resolve((reader.result as string).split(",")[1]);
-      reader.readAsDataURL(file);
-    });
-  }
-  
+
+  const data = await res.json();
+  return data.text;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      resolve((reader.result as string).split(",")[1]);
+    reader.readAsDataURL(file);
+  });
+}

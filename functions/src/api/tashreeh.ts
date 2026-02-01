@@ -19,8 +19,20 @@ export async function tashreehHandler(req: Request, res: Response) {
     const explanation = await generateText(prompt);
 
     return res.json({explanation});
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({error: "Tashreeh failed"});
+  } catch (err: unknown) {
+    const message = err instanceof Error ?
+      err.message :
+      "Unknown error";
+    console.error("Tashreeh error:", err);
+    let errorMsg: string;
+    if (message.includes("GEMINI_API_KEY") || message.includes("API key")) {
+      errorMsg = "Gemini API key not configured. Set google.gemini_key or " +
+        "GEMINI_API_KEY.";
+    } else if (message.startsWith("Gemini:")) {
+      errorMsg = message;
+    } else {
+      errorMsg = `Tashreeh failed: ${message}`;
+    }
+    return res.status(500).json({error: errorMsg});
   }
 }

@@ -7,8 +7,14 @@ typings/
 
 # Node.js dependency directory
 node_modules/
+/apps/web/node_modules/
+**/node_modules/
 *.local
 
 # env files
 .env
+.env
+.env.*
+**/.env
+**/.env.*
 functions/.env

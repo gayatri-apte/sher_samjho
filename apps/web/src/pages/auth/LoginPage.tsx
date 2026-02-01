@@ -1,7 +1,15 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber
+} from "firebase/auth";
+
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../services/firebase";
 import { useState } from "react";
+
+const googleProvider = new GoogleAuthProvider();
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -9,6 +17,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // 🔹 Phone auth state (ADDED)
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [confirmation, setConfirmation] = useState<any>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +36,41 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // 🔹 Google Login (ADDED)
+  async function loginWithGoogle() {
+    await signInWithPopup(auth, googleProvider);
+    navigate("/scan");
+  }
+
+  // 🔹 Phone OTP logic (ADDED)
+  function setupRecaptcha() {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        { size: "invisible" }
+      );
+    }
+  }
+
+  async function sendOTP() {
+    setupRecaptcha();
+    const appVerifier = (window as any).recaptchaVerifier;
+
+    const result = await signInWithPhoneNumber(
+      auth,
+      phone,
+      appVerifier
+    );
+
+    setConfirmation(result);
+  }
+
+  async function verifyOTP() {
+    await confirmation.confirm(otp);
+    navigate("/scan");
   }
 
   return (
@@ -57,6 +105,48 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Continue"}
           </button>
         </form>
+
+        {/* 🔹 Google Login Button (ADDED) */}
+        <button
+          onClick={loginWithGoogle}
+          className="w-full py-3 mt-4 rounded-xl bg-white text-black font-medium"
+        >
+          Continue with Google
+        </button>
+
+        {/* 🔹 Phone OTP Login (ADDED) */}
+        <div className="mt-6 space-y-3">
+          <input
+            placeholder="+91XXXXXXXXXX"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full px-4 py-2 rounded bg-neutral-800 border border-neutral-700"
+          />
+
+          <button
+            onClick={sendOTP}
+            className="w-full py-2 rounded bg-neutral-700"
+          >
+            Send OTP
+          </button>
+
+          <input
+            placeholder="Enter OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            className="w-full px-4 py-2 rounded bg-neutral-800 border border-neutral-700"
+          />
+
+          <button
+            onClick={verifyOTP}
+            className="w-full py-2 rounded bg-green-600"
+          >
+            Verify OTP
+          </button>
+        </div>
+
+        {/* 🔹 Recaptcha Container (REQUIRED) */}
+        <div id="recaptcha-container" />
       </div>
     </div>
   );

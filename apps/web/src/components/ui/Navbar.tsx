@@ -24,13 +24,23 @@ export default function Navbar() {
       </Link>
 
       {isAuthenticated ? (
-        <Link to="/scan" className={linkClass("/scan")}>
-          Scan
-        </Link>
+        <>
+          <Link to="/scan" className={linkClass("/scan")}>
+            Scan
+          </Link>
+          <Link to="/history" className={linkClass("/history")}>
+            History
+          </Link>
+        </>
       ) : (
-        <span className="text-neutral-500 cursor-not-allowed">
-          Scan
-        </span>
+        <>
+          <span className="text-neutral-500 cursor-not-allowed">
+            Scan
+          </span>
+          <span className="text-neutral-500 cursor-not-allowed">
+            History
+          </span>
+        </>
       )}
 
       <div className="ml-auto">

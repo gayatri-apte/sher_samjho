@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import ProtectedRoute from "./ProtectedRoute";
+import HistoryPage from "../pages/history/HistoryPage";
+
 
 // Real pages
 import HomePage from "../pages/home/HomePage";
@@ -36,6 +38,16 @@ const routes: AppRoute[] = [
     ),
     protected: true,
   },
+  {
+    path: "/history",
+    element: (
+      <ProtectedRoute>
+        <HistoryPage />
+      </ProtectedRoute>
+    ),
+    protected: true,
+  },
+  
 ];
 
 export default routes;
