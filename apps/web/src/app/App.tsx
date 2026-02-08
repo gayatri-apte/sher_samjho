@@ -1,11 +1,14 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import routes from "./routes";
 import Navbar from "../components/ui/Navbar";
 
 export default function App() {
+  const location = useLocation();
+  const hideNav = location.pathname === "/reader" || location.pathname === "/search";
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <Navbar />
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 overflow-x-hidden">
+      {!hideNav && <Navbar />}
 
       <Routes>
         {routes.map((route) => (

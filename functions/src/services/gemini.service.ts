@@ -7,7 +7,7 @@ let genAI: GoogleGenerativeAI | null = null;
  * Gets or initializes the Gemini AI client.
  * @return {GoogleGenerativeAI} The initialized Gemini AI client
  */
-function getGenAI(): GoogleGenerativeAI {
+export function getGenAI(): GoogleGenerativeAI {
   if (!genAI) {
     // Try Firebase Functions config first (for deployed functions)
     // Then fall back to environment variable (for local development)

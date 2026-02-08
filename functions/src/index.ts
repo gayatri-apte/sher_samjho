@@ -6,8 +6,18 @@ import cors from "cors";
 import {requireAuth} from "./guards/auth.guard";
 import {ocrHandler} from "./api/ocr";
 import {tashreehHandler} from "./api/tashreeh";
+import {getScanHandler} from "./api/scan";
 import {historyHandler} from "./api/history";
 import {saveHandler} from "./api/save";
+import {dictionaryHandler} from "./api/dictionary";
+import {
+  getVocabularyHandler,
+  saveVocabularyHandler,
+  reviewVocabularyHandler,
+} from "./api/vocabulary";
+import {saveWordHandler} from "./api/saveWord";
+import {wordReviewHandler} from "./api/wordReview";
+import {semanticSearch} from "./api/search";
 
 admin.initializeApp();
 
@@ -22,7 +32,15 @@ app.use(express.json({limit: "10mb"}));
 app.post("/ocr", ocrHandler);
 app.post("/tashreeh", tashreehHandler);
 app.get("/history", requireAuth, historyHandler);
+app.get("/history/:scanId", requireAuth, getScanHandler);
 app.post("/save", requireAuth, saveHandler);
+app.post("/dictionary", requireAuth, dictionaryHandler);
+app.get("/vocabulary", requireAuth, getVocabularyHandler);
+app.post("/vocabulary", requireAuth, saveVocabularyHandler);
+app.patch("/vocabulary/:id/review", requireAuth, reviewVocabularyHandler);
+app.post("/word/save", requireAuth, saveWordHandler);
+app.put("/word/review", requireAuth, wordReviewHandler);
+app.post("/search", semanticSearch);
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 app.use((

@@ -1,7 +1,24 @@
 import { api } from "../../config/api";
 import { auth } from "../../services/firebase";
 
-export async function sendImageForOCR(file: File): Promise<string> {
+export type TashreehLevels = {
+  beginner: string;
+  intermediate: string;
+  scholar: string;
+};
+
+export type OCRResult = {
+  rawUrdu: string;
+  script?: "urdu" | "devanagari";
+  devanagariText: string;
+  tashreeh: TashreehLevels | string;
+  romanText?: string;
+  textHash: string;
+  hitCount?: number;
+  createdAt?: unknown;
+};
+
+export async function sendImageForOCR(file: File): Promise<OCRResult> {
   const base64 = await fileToBase64(file);
   const token = await auth.currentUser?.getIdToken();
 
@@ -26,7 +43,7 @@ export async function sendImageForOCR(file: File): Promise<string> {
   }
 
   const data = await res.json();
-  return data.text;
+  return data as OCRResult;
 }
 
 function fileToBase64(file: File): Promise<string> {

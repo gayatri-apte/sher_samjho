@@ -1,18 +1,23 @@
 import {api} from "../../config/api";
 import {auth} from "../../services/firebase";
 
-export async function fetchTashreeh(text: string): Promise<string> {
+export type TashreehLevels = {
+  beginner: string;
+  intermediate: string;
+  scholar: string;
+};
+
+export async function fetchTashreeh(text: string): Promise<TashreehLevels> {
   const token = await auth.currentUser?.getIdToken(true);
 
   const res = await fetch(api.tashreeh, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? {Authorization: `Bearer ${token}`} : {}),
-      },
-      body: JSON.stringify({ text }),
-    }
-  );
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? {Authorization: `Bearer ${token}`} : {}),
+    },
+    body: JSON.stringify({ text }),
+  });
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -24,8 +29,8 @@ export async function fetchTashreeh(text: string): Promise<string> {
   }
 
   const data = await res.json();
-  if (!data.explanation) {
+  if (!data.beginner && !data.intermediate && !data.scholar) {
     throw new Error("No explanation received from server");
   }
-  return data.explanation;
+  return data as TashreehLevels;
 }

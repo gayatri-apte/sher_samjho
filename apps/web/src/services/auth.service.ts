@@ -1,9 +1,13 @@
-import {onAuthStateChanged, signOut} from "firebase/auth";
+import {onAuthStateChanged, signInAnonymously, signOut} from "firebase/auth";
 import type {User} from "firebase/auth";
 import {auth} from "./firebase";
 
 export function logout() {
   return signOut(auth);
+}
+
+export function guestLogin() {
+  return signInAnonymously(auth);
 }
 
 /** Waits for auth state to be ready. Resolves with user or rejects if not logged in. */

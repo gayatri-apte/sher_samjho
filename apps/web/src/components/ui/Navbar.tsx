@@ -18,9 +18,15 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="h-16 flex items-center gap-6 px-6 border-b border-neutral-800">
+    <nav className="h-16 flex items-center gap-6 px-4 sm:px-6 border-b border-neutral-800 min-w-0 shrink-0">
       <Link to="/" className={linkClass("/")}>
         Home
+      </Link>
+      <Link to="/search" className={linkClass("/search")}>
+        Search
+      </Link>
+      <Link to="/reader" className={linkClass("/reader")}>
+        Reader
       </Link>
 
       {isAuthenticated ? (
@@ -31,6 +37,9 @@ export default function Navbar() {
           <Link to="/history" className={linkClass("/history")}>
             History
           </Link>
+          <Link to="/vocabulary" className={linkClass("/vocabulary")}>
+            Vocabulary
+          </Link>
         </>
       ) : (
         <>
@@ -39,6 +48,9 @@ export default function Navbar() {
           </span>
           <span className="text-neutral-500 cursor-not-allowed">
             History
+          </span>
+          <span className="text-neutral-500 cursor-not-allowed">
+            Vocabulary
           </span>
         </>
       )}

@@ -1,26 +1,41 @@
 import { useState } from "react";
 import { fetchTashreeh } from "./tashreeh.service";
+import type { TashreehLevels } from "./tashreeh.service";
+
+export type TashreehLevel = "beginner" | "intermediate" | "scholar";
 
 export function useTashreeh() {
-  const [explanation, setExplanation] = useState<string | null>(null);
+  const [levels, setLevels] = useState<TashreehLevels | null>(null);
+  const [level, setLevel] = useState<TashreehLevel>("beginner");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const explanation =
+    levels == null ? null : levels[level] ?? levels.beginner ?? null;
 
   async function explain(text: string) {
     try {
       setLoading(true);
       setError(null);
-      console.log("Fetching tashreeh for text:", text);
       const result = await fetchTashreeh(text);
-      console.log("Tashreeh result:", result);
-      setExplanation(result);
-    } catch (e: any) {
-      console.error("Tashreeh error:", e);
-      setError(e.message || "Failed to get explanation");
+      setLevels(result);
+      return result;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to get explanation";
+      setError(msg);
+      throw e;
     } finally {
       setLoading(false);
     }
   }
 
-  return { explanation, loading, error, explain };
+  return {
+    levels,
+    level,
+    setLevel,
+    explanation,
+    loading,
+    error,
+    explain,
+  };
 }

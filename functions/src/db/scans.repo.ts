@@ -1,4 +1,4 @@
-import {getFirestore} from "firebase-admin/firestore";
+import {getFirestore, Timestamp} from "firebase-admin/firestore";
 
 /**
  * Saves a scan record under the authenticated user.
@@ -20,10 +20,14 @@ export async function saveScan(
     .collection("users")
     .doc(uid)
     .collection("scans")
-    .add({
-      cacheHash,
-      imageHash,
-      source,
-      createdAt: new Date(),
-    });
+    .doc(cacheHash)
+    .set(
+      {
+        cacheHash,
+        imageHash,
+        source,
+        createdAt: Timestamp.now(),
+      },
+      {merge: true}
+    );
 }

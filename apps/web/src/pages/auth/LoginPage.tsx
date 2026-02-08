@@ -7,6 +7,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../services/firebase";
+import { guestLogin } from "../../services/auth.service";
 import { useState } from "react";
 
 const googleProvider = new GoogleAuthProvider();
@@ -112,6 +113,33 @@ export default function LoginPage() {
           className="w-full py-3 mt-4 rounded-xl bg-white text-black font-medium"
         >
           Continue with Google
+        </button>
+
+        <button
+          type="button"
+          onClick={async () => {
+            setLoading(true);
+            setError("");
+            try {
+              await guestLogin();
+              navigate("/scan");
+            } catch (err: any) {
+              const code = err?.code ?? "";
+              if (code === "auth/operation-not-allowed") {
+                setError(
+                  "Guest sign-in is disabled. Enable Anonymous sign-in in Firebase Console → Authentication → Sign-in method."
+                );
+              } else {
+                setError(err?.message ?? "Guest sign-in failed");
+              }
+            } finally {
+              setLoading(false);
+            }}
+          }
+          disabled={loading}
+          className="w-full py-2 mt-3 rounded border border-neutral-600 text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+        >
+          Continue as guest
         </button>
 
         {/* 🔹 Phone OTP Login (ADDED) */}

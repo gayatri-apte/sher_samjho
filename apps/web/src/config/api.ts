@@ -11,4 +11,9 @@ export const api = {
   tashreeh: `${API_BASE}/api/tashreeh`,
   history: `${API_BASE}/api/history`,
   save: `${API_BASE}/api/save`,
+  dictionary: `${API_BASE}/api/dictionary`,
+  vocabulary: `${API_BASE}/api/vocabulary`,
+  wordSave: `${API_BASE}/api/word/save`,
+  wordReview: `${API_BASE}/api/word/review`,
+  search: `${API_BASE}/api/search`,
 } as const;

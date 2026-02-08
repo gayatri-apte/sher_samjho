@@ -1,9 +1,45 @@
 import {Request, Response} from "express";
 import {beginnerTashreehPrompt} from "../prompts/tashreeh.beginner";
+import {intermediateTashreehPrompt} from "../prompts/tashreeh.intermediate";
+import {scholarTashreehPrompt} from "../prompts/tashreeh.scholar";
 import {generateText} from "../services/gemini.service";
 
+export type TashreehLevels = {
+  beginner: string;
+  intermediate: string;
+  scholar: string;
+};
+
 /**
- * Handles tashreeh (explanation) requests for Urdu poetry.
+ * Generates tashreeh (explanation) for devanagari text. OCR uses beginner only.
+ * @param {string} devanagariText - Text in Devanagari script
+ * @return {Promise<string>} Explanation text (beginner level)
+ */
+export async function generateTashreeh(
+  devanagariText: string
+): Promise<string> {
+  const prompt = beginnerTashreehPrompt(devanagariText);
+  return generateText(prompt);
+}
+
+/**
+ * Generates all three explanation levels for devanagari text.
+ * @param {string} devanagariText - Text in Devanagari script
+ * @return {Promise<TashreehLevels>} Object with beginner, intermediate, scholar
+ */
+export async function generateTashreehLevels(
+  devanagariText: string
+): Promise<TashreehLevels> {
+  const [beginner, intermediate, scholar] = await Promise.all([
+    generateText(beginnerTashreehPrompt(devanagariText)),
+    generateText(intermediateTashreehPrompt(devanagariText)),
+    generateText(scholarTashreehPrompt(devanagariText)),
+  ]);
+  return {beginner, intermediate, scholar};
+}
+
+/**
+ * Handles tashreeh (explanation) requests for Urdu poetry. Returns all levels.
  * @param {Request} req - Express request object
  * @param {Response} res - Express response object
  */
@@ -15,10 +51,9 @@ export async function tashreehHandler(req: Request, res: Response) {
       return res.status(400).json({error: "Text is required"});
     }
 
-    const prompt = beginnerTashreehPrompt(text);
-    const explanation = await generateText(prompt);
+    const levels = await generateTashreehLevels(text);
 
-    return res.json({explanation});
+    return res.json(levels);
   } catch (err: unknown) {
     const message = err instanceof Error ?
       err.message :

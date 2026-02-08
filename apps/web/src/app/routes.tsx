@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import ProtectedRoute from "./ProtectedRoute";
 import HistoryPage from "../pages/history/HistoryPage";
+import HistoryDetailPage from "../pages/history/HistoryDetailPage";
+import VocabularyPage from "../pages/vocabulary/VocabularyPage";
+import ReaderPage from "../pages/reader/ReaderPage";
+import SearchPage from "../pages/search/SearchPage";
 
 
 // Real pages
@@ -47,7 +51,32 @@ const routes: AppRoute[] = [
     ),
     protected: true,
   },
-  
+  {
+    path: "/vocabulary",
+    element: (
+      <ProtectedRoute>
+        <VocabularyPage />
+      </ProtectedRoute>
+    ),
+    protected: true,
+  },
+  {
+    path: "/history/:id",
+    element: (
+      <ProtectedRoute>
+        <HistoryDetailPage />
+      </ProtectedRoute>
+    ),
+    protected: true,
+  },
+  {
+    path: "/reader",
+    element: <ReaderPage />,
+  },
+  {
+    path: "/search",
+    element: <SearchPage />,
+  },
 ];
 
 export default routes;
