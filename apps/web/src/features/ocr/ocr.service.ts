@@ -16,6 +16,8 @@ export type OCRResult = {
   textHash: string;
   hitCount?: number;
   createdAt?: unknown;
+  confidence?: number;
+  aiGenerated?: boolean;
 };
 
 export async function sendImageForOCR(file: File): Promise<OCRResult> {

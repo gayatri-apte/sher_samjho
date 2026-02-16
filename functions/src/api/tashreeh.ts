@@ -39,21 +39,41 @@ export async function generateTashreehLevels(
 }
 
 /**
- * Handles tashreeh (explanation) requests for Urdu poetry. Returns all levels.
+ * Handles tashreeh (explanation) requests for Urdu poetry.
+ * If level is provided (beginner | intermediate | scholar), returns single
+ * explanation with confidence. Otherwise returns all three levels.
  * @param {Request} req - Express request object
  * @param {Response} res - Express response object
  */
 export async function tashreehHandler(req: Request, res: Response) {
   try {
-    const {text} = req.body;
+    const {text, level} = req.body as { text?: string; level?: string };
 
     if (!text) {
       return res.status(400).json({error: "Text is required"});
     }
 
-    const levels = await generateTashreehLevels(text);
+    const confidence = 0.85;
+    const aiGenerated = true;
 
-    return res.json(levels);
+    if (level === "beginner") {
+      const prompt = beginnerTashreehPrompt(text);
+      const explanation = await generateText(prompt);
+      return res.json({explanation, confidence, aiGenerated});
+    }
+    if (level === "scholar") {
+      const prompt = scholarTashreehPrompt(text);
+      const explanation = await generateText(prompt);
+      return res.json({explanation, confidence, aiGenerated});
+    }
+    if (level === "intermediate") {
+      const prompt = intermediateTashreehPrompt(text);
+      const explanation = await generateText(prompt);
+      return res.json({explanation, confidence, aiGenerated});
+    }
+
+    const levels = await generateTashreehLevels(text);
+    return res.json({...levels, confidence, aiGenerated});
   } catch (err: unknown) {
     const message = err instanceof Error ?
       err.message :

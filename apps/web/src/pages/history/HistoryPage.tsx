@@ -8,6 +8,11 @@ type HistoryItem = {
   devanagariText?: string;
   cacheHash?: string;
   createdAt: any;
+  explanation?: string;
+  tashreeh?: string;
+  poet?: string;
+  ocrConfidence?: number;
+  attributionConfidence?: number;
 };
 
 function formatDate(createdAt: any) {
@@ -67,6 +72,11 @@ export default function HistoryPage() {
               navigate("/reader", {
                 state: {
                   text: item.devanagariText ?? item.text ?? "",
+                  poet: item.poet ?? "",
+                  explanation: item.explanation ?? item.tashreeh ?? "",
+                  ocrConfidence: item.ocrConfidence,
+                  attributionConfidence: item.attributionConfidence,
+                  cacheHash: item.cacheHash,
                 },
               })
             }

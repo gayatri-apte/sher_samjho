@@ -19,8 +19,7 @@ export async function semanticSearch(req: Request, res: Response) {
   const queryEmbedding = await createEmbedding(query);
   const snaps = await db.collection("global_poetry_cache").get();
 
-  type Result = { devanagariText: unknown; tashreeh: unknown; score: number };
-  const results: Result[] = snaps.docs
+  const results = snaps.docs
     .map((doc) => {
       const data = doc.data();
       if (!data.embedding) return null;
@@ -30,12 +29,26 @@ export async function semanticSearch(req: Request, res: Response) {
         data.embedding as number[]
       );
       return {
+        id: doc.id,
         devanagariText: data.devanagariText,
         tashreeh: data.tashreeh,
+        poet: data.poet as string | undefined,
+        era: data.era as string | undefined,
         score,
       };
     })
-    .filter((x): x is Result => x != null)
+    .filter(
+      (
+        x
+      ): x is {
+        id: string;
+        devanagariText: unknown;
+        tashreeh: unknown;
+        poet: string | undefined;
+        era: string | undefined;
+        score: number;
+      } => x !== null
+    )
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 

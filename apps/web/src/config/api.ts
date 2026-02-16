@@ -16,4 +16,6 @@ export const api = {
   wordSave: `${API_BASE}/api/word/save`,
   wordReview: `${API_BASE}/api/word/review`,
   search: `${API_BASE}/api/search`,
+  keywordSearch: `${API_BASE}/api/search/keyword`,
+  moodSearch: `${API_BASE}/api/search/mood`,
 } as const;

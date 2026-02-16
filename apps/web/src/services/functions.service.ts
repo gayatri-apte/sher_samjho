@@ -68,6 +68,9 @@ export async function saveHistory(data: {
   explanation: string;
   devanagariText?: string;
   tashreeh?: string;
+  poet?: string;
+  ocrConfidence?: number;
+  attributionConfidence?: number;
 }) {
   const user = await waitForAuth();
   const token = await user.getIdToken(true);

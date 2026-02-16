@@ -50,7 +50,12 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
       await cacheRef.update({
         hitCount: admin.firestore.FieldValue.increment(1),
       });
-      res.json(cached.data());
+      const cachedData = cached.data();
+      res.json({
+        ...cachedData,
+        confidence: cachedData?.confidence ?? 0.85,
+        aiGenerated: cachedData?.aiGenerated ?? true,
+      });
       return;
     }
 
@@ -80,6 +85,8 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
       textHash,
       hitCount: 1,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      confidence: 0.85,
+      aiGenerated: true,
     };
 
     await cacheRef.set(result);

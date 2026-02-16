@@ -1,6 +1,6 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
-import { logout } from "../../services/auth.service";
+import {Link, useLocation, useNavigate} from "react-router-dom";
+import {useAuth} from "../../hooks/useAuth";
+import {logout} from "../../services/auth.service";
 
 export default function Navbar() {
   const location = useLocation();
@@ -25,8 +25,14 @@ export default function Navbar() {
       <Link to="/search" className={linkClass("/search")}>
         Search
       </Link>
+      <Link to="/discover" className={linkClass("/discover")}>
+        Discover
+      </Link>
       <Link to="/reader" className={linkClass("/reader")}>
         Reader
+      </Link>
+      <Link to="/feed" className={linkClass("/feed")}>
+        Daily Feed
       </Link>
 
       {isAuthenticated ? (
@@ -40,6 +46,9 @@ export default function Navbar() {
           <Link to="/vocabulary" className={linkClass("/vocabulary")}>
             Vocabulary
           </Link>
+          <Link to="/admin" className={linkClass("/admin")}>
+            Admin
+          </Link>
         </>
       ) : (
         <>
@@ -51,6 +60,9 @@ export default function Navbar() {
           </span>
           <span className="text-neutral-500 cursor-not-allowed">
             Vocabulary
+          </span>
+          <span className="text-neutral-500 cursor-not-allowed">
+            Admin
           </span>
         </>
       )}

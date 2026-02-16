@@ -2,7 +2,40 @@ import type {DecodedIdToken} from "firebase-admin/auth";
 import type {Request, Response} from "express";
 import {getFirestore, Timestamp, FieldValue} from "firebase-admin/firestore";
 import {createEmbedding} from "../utils/embedding.js";
+import {generateKeywords} from "../utils/keywords.js";
 import {updateStreak} from "../utils/streak.js";
+import {extractPoet} from "../utils/metadata.js";
+import {getEraFromPoet, getMovementFromPoet} from "../utils/poetMeta.js";
+
+/**
+ * Detects high-level thematic tags from a poem's text.
+ * Used to power mood/theme-based discovery (e.g. love, longing, rebellion).
+ *
+ * @param {string} text - Poem text in Devanagari/Urdu (normalized string)
+ * @return {string[]} Array of theme identifiers
+ */
+function detectThemes(text: string): string[] {
+  const lower = text.toLowerCase();
+  const themes: string[] = [];
+
+  if (lower.includes("ishq") || lower.includes("mohabbat")) {
+    themes.push("love");
+  }
+
+  if (lower.includes("hijr") || lower.includes("judai")) {
+    themes.push("longing");
+  }
+
+  if (lower.includes("inqilab") || lower.includes("azaadi")) {
+    themes.push("rebellion");
+  }
+
+  if (themes.length === 0) {
+    themes.push("general");
+  }
+
+  return themes;
+}
 
 type AuthRequest = Request & {user?: DecodedIdToken};
 
@@ -19,7 +52,17 @@ export async function saveHandler(req: AuthRequest, res: Response) {
       return res.status(401).json({error: "Unauthorized"});
     }
 
-    const {cacheHash, hash, text, explanation, devanagariText, tashreeh} =
+    const {
+      cacheHash,
+      hash,
+      text,
+      explanation,
+      devanagariText,
+      tashreeh,
+      poet: incomingPoet,
+      ocrConfidence,
+      attributionConfidence,
+    } =
       req.body as {
         cacheHash?: string;
         hash?: string;
@@ -27,6 +70,9 @@ export async function saveHandler(req: AuthRequest, res: Response) {
         explanation?: string;
         devanagariText?: string;
         tashreeh?: string;
+        poet?: string;
+        ocrConfidence?: number;
+        attributionConfidence?: number;
       };
 
     const id = cacheHash || hash;
@@ -52,6 +98,12 @@ export async function saveHandler(req: AuthRequest, res: Response) {
           explanation: explanation ?? tashreeh,
           devanagariText: devanagariText ?? text,
           tashreeh: tashreeh ?? explanation,
+          ocrConfidence:
+            typeof ocrConfidence === "number" ? ocrConfidence : undefined,
+          attributionConfidence:
+            typeof attributionConfidence === "number" ?
+              attributionConfidence :
+              undefined,
           createdAt: Timestamp.now(),
         },
         {merge: true}
@@ -60,14 +112,34 @@ export async function saveHandler(req: AuthRequest, res: Response) {
     const textForCache = devanagariText ?? text ?? "";
     if (textForCache) {
       const embedding = await createEmbedding(textForCache);
+      const keywords = generateKeywords(textForCache);
+      const poet = incomingPoet && incomingPoet.trim() !== "" ?
+        incomingPoet :
+        extractPoet(textForCache);
+      const era = getEraFromPoet(poet);
+      const source = "User Scan";
+      const movement = getMovementFromPoet(poet);
+      const themes = detectThemes(textForCache);
       await db
         .collection("global_poetry_cache")
         .doc(id)
         .set(
           {
             embedding,
+            keywords,
             devanagariText: textForCache,
             tashreeh: tashreeh ?? explanation,
+            poet,
+            era,
+            movement,
+            source,
+            themes,
+            ocrConfidence:
+              typeof ocrConfidence === "number" ? ocrConfidence : undefined,
+            attributionConfidence:
+              typeof attributionConfidence === "number" ?
+                attributionConfidence :
+                undefined,
             updatedAt: FieldValue.serverTimestamp(),
           },
           {merge: true}

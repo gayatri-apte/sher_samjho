@@ -5,7 +5,13 @@ import HistoryDetailPage from "../pages/history/HistoryDetailPage";
 import VocabularyPage from "../pages/vocabulary/VocabularyPage";
 import ReaderPage from "../pages/reader/ReaderPage";
 import SearchPage from "../pages/search/SearchPage";
-
+import DiscoverPage from "../pages/discover/DiscoverPage";
+import EraExplorerPage from "../pages/explorer/EraExplorerPage";
+import PoetExplorer from "./explorer/PoetExplorer";
+import PoetDetails from "./explorer/PoetDetails";
+import ThemeExplorer from "./explorer/ThemeExplorer";
+import DailyFeed from "./feed/DailyFeed";
+import AdminDashboard from "./admin/AdminDashboard";
 
 // Real pages
 import HomePage from "../pages/home/HomePage";
@@ -74,8 +80,41 @@ const routes: AppRoute[] = [
     element: <ReaderPage />,
   },
   {
+    path: "/feed",
+    element: <DailyFeed />,
+  },
+  {
     path: "/search",
     element: <SearchPage />,
+  },
+  {
+    path: "/discover",
+    element: <DiscoverPage />,
+  },
+  {
+    path: "/explorer",
+    element: <EraExplorerPage />,
+  },
+  {
+    path: "/explorer/poets",
+    element: <PoetExplorer />,
+  },
+  {
+    path: "/explorer/poets/:name",
+    element: <PoetDetails />,
+  },
+  {
+    path: "/explorer/themes",
+    element: <ThemeExplorer />,
+  },
+  {
+    path: "/admin",
+    element: (
+      <ProtectedRoute>
+        <AdminDashboard />
+      </ProtectedRoute>
+    ),
+    protected: true,
   },
 ];
 

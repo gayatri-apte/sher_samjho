@@ -5,11 +5,22 @@ import {
   type VocabularyItem,
 } from "../../services/functions.service";
 
+function formatTimestamp(value: unknown): string {
+  if (value == null) return "—";
+  const o = value as { seconds?: number; nanoseconds?: number };
+  if (typeof o?.seconds === "number") {
+    return new Date(o.seconds * 1000).toLocaleString();
+  }
+  if (value instanceof Date) return value.toLocaleString();
+  return "—";
+}
+
 export default function VocabularyPage() {
   const [words, setWords] = useState<VocabularyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +44,7 @@ export default function VocabularyPage() {
   }, []);
 
   async function handleReview(wordId: string, quality: number) {
+    setReviewError(null);
     setReviewingId(wordId);
     try {
       const { strength } = await reviewVocabulary(wordId, quality);
@@ -42,6 +54,8 @@ export default function VocabularyPage() {
         )
       );
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Review failed";
+      setReviewError(message);
       console.error("Review failed:", err);
     } finally {
       setReviewingId(null);
@@ -70,8 +84,14 @@ export default function VocabularyPage() {
     <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-3xl mb-4">My Vocabulary</h2>
       <p className="text-sm text-neutral-400 mb-6">
-        Tap a word on the Scan page to look it up and save it here. Rate how well you knew it to update strength (spaced repetition).
+        Tap a word on the Scan page to look it up and save it here. Rate how well you knew it (0–5) to update strength (spaced repetition).
       </p>
+
+      {reviewError && (
+        <p className="mb-4 p-3 rounded-lg bg-red-900/30 border border-red-700/50 text-red-300 text-sm">
+          {reviewError}
+        </p>
+      )}
 
       {words.length === 0 ? (
         <p className="text-neutral-500">No words saved yet. Scan poetry and tap words to add them.</p>
@@ -90,6 +110,8 @@ export default function VocabularyPage() {
               </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-xs text-neutral-500">Strength: {w.strength}</span>
+                <span className="text-neutral-600">·</span>
+                <span className="text-xs text-neutral-500">Last reviewed: {formatTimestamp(w.lastReviewed)}</span>
                 <span className="text-neutral-600">·</span>
                 <span className="text-xs text-neutral-500">Rate recall:</span>
                 {[0, 1, 2, 3, 4, 5].map((q) => (

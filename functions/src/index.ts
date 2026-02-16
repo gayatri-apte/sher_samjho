@@ -18,6 +18,10 @@ import {
 import {saveWordHandler} from "./api/saveWord";
 import {wordReviewHandler} from "./api/wordReview";
 import {semanticSearch} from "./api/search";
+import {keywordSearch} from "./api/keywordSearch";
+import {moodSearch} from "./api/mood";
+import {similarSher} from "./api/similar";
+import {eraSearch} from "./api/era";
 
 admin.initializeApp();
 
@@ -41,6 +45,10 @@ app.patch("/vocabulary/:id/review", requireAuth, reviewVocabularyHandler);
 app.post("/word/save", requireAuth, saveWordHandler);
 app.put("/word/review", requireAuth, wordReviewHandler);
 app.post("/search", semanticSearch);
+app.post("/search/keyword", keywordSearch);
+app.post("/search/mood", moodSearch);
+app.post("/similar", similarSher);
+app.post("/search/era", eraSearch);
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 app.use((

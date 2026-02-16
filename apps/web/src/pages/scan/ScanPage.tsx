@@ -18,6 +18,7 @@ export default function ScanPage() {
   const [user, setUser] = useState<User | null>(null);
   const [script, setScript] = useState<ScriptView>("dev");
   const [tashreehLevel, setTashreehLevel] = useState<TashreehLevelKey>("beginner");
+  const [poet, setPoet] = useState("");
   const {
     result,
     devanagariText,
@@ -152,6 +153,20 @@ export default function ScanPage() {
                 </div>
               )}
 
+              <div className="mt-4 flex items-center gap-3 w-full max-w-4xl shrink-0">
+                <span className="text-sm text-neutral-400">Poet:</span>
+                <select
+                  value={poet}
+                  onChange={(e) => setPoet(e.target.value)}
+                  className="rounded border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
+                >
+                  <option value="">Unknown Poet</option>
+                  <option value="Mirza Ghalib">Mirza Ghalib</option>
+                  <option value="Mir Taqi Mir">Mir Taqi Mir</option>
+                  <option value="Faiz Ahmed Faiz">Faiz Ahmed Faiz</option>
+                </select>
+              </div>
+
               <button
                 onClick={async () => {
                   if (!user) return;
@@ -165,6 +180,9 @@ export default function ScanPage() {
                       explanation: tashreehText || (typeof tashreeh === "string" ? tashreeh : ""),
                       devanagariText: devanagariText ?? undefined,
                       tashreeh: tashreehText || (typeof tashreeh === "string" ? tashreeh : undefined),
+                      poet: poet || undefined,
+                      ocrConfidence: result?.confidence ?? 0.7,
+                      attributionConfidence: poet && poet.trim() !== "" ? 1 : 0,
                     });
                     setSaved(true);
                   } catch (err: unknown) {
@@ -219,12 +237,21 @@ export default function ScanPage() {
           )}
 
           {tashreehText && (
-            <div
-              className="mt-6 w-full min-w-0 max-w-4xl rounded-xl border border-neutral-700/50 bg-neutral-800/40 p-6 text-lg leading-relaxed text-neutral-100 tracking-normal whitespace-pre-wrap break-words overflow-hidden"
-              style={{ fontFamily: "Noto Sans Devanagari, sans-serif" }}
-            >
-              {tashreehText}
-            </div>
+            <>
+              <div
+                className="mt-6 w-full min-w-0 max-w-4xl rounded-xl border border-neutral-700/50 bg-neutral-800/40 p-6 text-lg leading-relaxed text-neutral-100 tracking-normal whitespace-pre-wrap break-words overflow-hidden"
+                style={{ fontFamily: "Noto Sans Devanagari, sans-serif" }}
+              >
+                {tashreehText}
+              </div>
+              <div className="text-xs text-neutral-400 mt-2">
+                AI Interpretation • Confidence{" "}
+                {result?.confidence != null
+                  ? Math.round(result.confidence * 100)
+                  : 85}
+                %
+              </div>
+            </>
           )}
 
           <button
