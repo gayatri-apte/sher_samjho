@@ -5,6 +5,10 @@ import {db} from "../../services/firebase";
 import Comments from "../../components/Comments";
 import FollowPoet from "../../components/FollowPoet";
 import ShareCard from "../../components/ShareCard";
+import AudioPlayer from "../../components/AudioPlayer";
+import Recorder from "../../components/Recorder";
+import OfficialRecitations from "../../components/OfficialRecitations.tsx";
+import {useAuth} from "../../hooks/useAuth";
 
 export default function ReaderPage() {
   const {state} = useLocation();
@@ -15,6 +19,7 @@ export default function ReaderPage() {
     typeof state?.attributionConfidence === "number" ?
       state.attributionConfidence :
       null;
+  const {isAuthenticated} = useAuth();
   const [poet, setPoet] = useState(state?.poet ?? "");
   const [similar, setSimilar] = useState<any[]>([]);
   const sherId: string | undefined =
@@ -70,11 +75,37 @@ export default function ReaderPage() {
         {poet && <FollowPoet poetId={poet} />}
       </div>
 
-      <div className="text-2xl leading-loose tracking-wide whitespace-pre-wrap font-serif">
-        {text}
+      <div className="text-2xl leading-loose tracking-wide font-serif whitespace-pre-wrap">
+        {text.split("\n").map((line: string, lineIdx: number) => (
+          <p key={lineIdx}>
+            {line.split(/\s+/).filter(Boolean).map((w: string, i: number) => (
+              <span key={i} className="mx-1 hover:bg-yellow-500">
+                {w}
+              </span>
+            ))}
+          </p>
+        ))}
       </div>
 
+      <AudioPlayer text={text} />
+
+      {sherId && isAuthenticated && <Recorder sherId={sherId} />}
+
+      {sherId && <OfficialRecitations sherId={sherId} />}
+
       <ShareCard text={text} poet={poet} />
+
+      {sherId && (
+        <p className="mt-4">
+          <Link
+            to="/poetry-ai"
+            state={{ cacheHash: sherId }}
+            className="text-indigo-400 hover:underline"
+          >
+            Ask the AI about this sher →
+          </Link>
+        </p>
+      )}
 
       {ocrConfidence != null && (
         <p className="text-sm text-neutral-400 mt-4">

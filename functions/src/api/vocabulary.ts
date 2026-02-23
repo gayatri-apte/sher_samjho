@@ -2,6 +2,7 @@ import type {DecodedIdToken} from "firebase-admin/auth";
 import type {Request, Response} from "express";
 import {getFirestore, FieldValue} from "firebase-admin/firestore";
 import {updateStrength} from "../utils/sm2.js";
+import {incrementStat} from "../utils/updateAnalytics";
 
 type AuthRequest = Request & {user?: DecodedIdToken};
 
@@ -141,6 +142,8 @@ export async function reviewVocabularyHandler(req: AuthRequest, res: Response) {
       strength: newStrength,
       lastReviewed: FieldValue.serverTimestamp(),
     });
+
+    await incrementStat("totalReviews");
 
     return res.json({success: true, strength: newStrength});
   } catch (err: unknown) {

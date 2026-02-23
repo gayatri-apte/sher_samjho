@@ -1,6 +1,8 @@
 import type {DecodedIdToken} from "firebase-admin/auth";
 import type {Request, Response} from "express";
 import {getFirestore, FieldValue} from "firebase-admin/firestore";
+import {updateUserStats} from "../utils/updateUserStats";
+import {incrementStat} from "../utils/updateAnalytics";
 
 type AuthRequest = Request & {user?: DecodedIdToken};
 
@@ -41,6 +43,10 @@ export async function wordReviewHandler(req: AuthRequest, res: Response) {
       strength: r,
       lastReviewed: FieldValue.serverTimestamp(),
     });
+
+    await updateUserStats(uid, "totalReviews");
+
+    await incrementStat("totalReviews");
 
     return res.json({success: true, strength: r});
   } catch (err: unknown) {

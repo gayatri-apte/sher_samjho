@@ -27,13 +27,6 @@ export default function HomePage() {
           >
             Scan Poetry
           </button>
-
-          <button
-            onClick={() => (window.location.href = "/login")}
-            className="px-8 py-4 rounded-xl border border-neutral-700 text-neutral-200 hover:bg-neutral-800 transition-all duration-200 font-semibold"
-          >
-            Login
-          </button>
         </div>
 
         {/* Divider */}

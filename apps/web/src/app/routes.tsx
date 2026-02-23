@@ -12,6 +12,9 @@ import PoetDetails from "./explorer/PoetDetails";
 import ThemeExplorer from "./explorer/ThemeExplorer";
 import DailyFeed from "./feed/DailyFeed";
 import AdminDashboard from "./admin/AdminDashboard";
+import PoetryAIPage from "./poetry-ai/PoetryAIPage";
+import LeaderboardPage from "./leaderboard/LeaderboardPage";
+import DashboardPage from "./dashboard/DashboardPage";
 
 // Real pages
 import HomePage from "../pages/home/HomePage";
@@ -112,6 +115,32 @@ const routes: AppRoute[] = [
     element: (
       <ProtectedRoute>
         <AdminDashboard />
+      </ProtectedRoute>
+    ),
+    protected: true,
+  },
+  {
+    path: "/poetry-ai",
+    element: <PoetryAIPage />,
+  },
+  {
+    path: "/poetry-ai/:textHash",
+    element: <PoetryAIPage />,
+  },
+  {
+    path: "/leaderboard",
+    element: (
+      <ProtectedRoute>
+        <LeaderboardPage />
+      </ProtectedRoute>
+    ),
+    protected: true,
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <ProtectedRoute>
+        <DashboardPage />
       </ProtectedRoute>
     ),
     protected: true,

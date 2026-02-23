@@ -22,6 +22,13 @@ import {keywordSearch} from "./api/keywordSearch";
 import {moodSearch} from "./api/mood";
 import {similarSher} from "./api/similar";
 import {eraSearch} from "./api/era";
+import {poetryChat} from "./api/poetryChat";
+import {poetryComplete} from "./api/poetryComplete";
+import {ttsHandler} from "./api/tts";
+import {uploadRecitation} from "./api/uploadRecitation";
+import {getOfficialRecitations} from "./api/officialRecitations";
+import {leaderboard} from "./api/leaderboard";
+import {adminAnalytics} from "./api/adminAnalytics";
 
 admin.initializeApp();
 
@@ -49,6 +56,13 @@ app.post("/search/keyword", keywordSearch);
 app.post("/search/mood", moodSearch);
 app.post("/similar", similarSher);
 app.post("/search/era", eraSearch);
+app.post("/poetry-chat", poetryChat);
+app.post("/poetry-complete", poetryComplete);
+app.post("/tts", ttsHandler);
+app.post("/upload-recitation", requireAuth, uploadRecitation);
+app.get("/official-recitations/:sherId", getOfficialRecitations);
+app.get("/leaderboard", leaderboard);
+app.get("/admin-analytics", adminAnalytics);
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 app.use((

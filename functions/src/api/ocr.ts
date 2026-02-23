@@ -9,6 +9,7 @@ import {
   transliterateToRoman,
 } from "../utils/transliterate";
 import {generateTashreehLevels} from "./tashreeh";
+import {incrementStat} from "../utils/updateAnalytics";
 
 /**
  * Normalizes whitespace for display.
@@ -51,6 +52,7 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
         hitCount: admin.firestore.FieldValue.increment(1),
       });
       const cachedData = cached.data();
+      await incrementStat("totalScans");
       res.json({
         ...cachedData,
         confidence: cachedData?.confidence ?? 0.85,
@@ -91,6 +93,7 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
 
     await cacheRef.set(result);
 
+    await incrementStat("totalScans");
     res.json(result);
     return;
   } catch (error) {

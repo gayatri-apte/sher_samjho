@@ -1,31 +1,19 @@
 import {GoogleGenerativeAI} from "@google/generative-ai";
-import * as functions from "firebase-functions";
 
 let genAI: GoogleGenerativeAI | null = null;
 
 /**
  * Gets or initializes the Gemini AI client.
+ * Uses GEMINI_API_KEY from environment (.env or .env.<projectId>).
  * @return {GoogleGenerativeAI} The initialized Gemini AI client
  */
 export function getGenAI(): GoogleGenerativeAI {
   if (!genAI) {
-    // Try Firebase Functions config first (for deployed functions)
-    // Then fall back to environment variable (for local development)
-    let apiKey: string | undefined;
-    try {
-      type Config = {google?: {gemini_key?: string}};
-      const getConfig = functions.config as () => Config;
-      const config = getConfig();
-      apiKey = config.google?.gemini_key;
-    } catch {
-      // functions.config() not available, use env var
-    }
-    apiKey = apiKey || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error(
-        "GEMINI_API_KEY not set. Configure via " +
-        "firebase functions:config:set google.gemini_key=\"your-key\" " +
-        "or set GEMINI_API_KEY environment variable",
+        "GEMINI_API_KEY not set. Add it to functions/.env and redeploy. " +
+        "See firebase.google.com/docs/functions/config-env",
       );
     }
     genAI = new GoogleGenerativeAI(apiKey);
@@ -53,21 +41,9 @@ export async function generateText(prompt: string): Promise<string> {
 
   // Model name must be valid for the API version used by
   // @google/generative-ai (v1beta).
-  // Default is gemini-2.5-flash which supports generateContent and has high
-  // token limits (up to 1M tokens).
-  // Override via env var if needed, e.g. "gemini-1.5-pro",
-  // "gemini-1.5-flash", "gemini-2.0-flash".
-  let modelName: string | undefined;
-  try {
-    type Config = {google?: {gemini_model?: string}};
-    const getConfig = functions.config as () => Config;
-    const config = getConfig();
-    modelName = config.google?.gemini_model;
-  } catch {
-    // functions.config() not available (e.g. local env without Firebase
-    // runtime)
-  }
-  modelName = process.env.GEMINI_MODEL || modelName || "gemini-2.5-flash";
+  // Default is gemini-2.5-flash. Override via GEMINI_MODEL in .env if needed.
+  const modelName =
+    process.env.GEMINI_MODEL || "gemini-2.5-flash";
   console.log("Using Gemini model:", modelName);
   const model = client.getGenerativeModel({model: modelName});
 

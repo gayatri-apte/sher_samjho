@@ -6,6 +6,7 @@ import {generateKeywords} from "../utils/keywords.js";
 import {updateStreak} from "../utils/streak.js";
 import {extractPoet} from "../utils/metadata.js";
 import {getEraFromPoet, getMovementFromPoet} from "../utils/poetMeta.js";
+import {updateUserStats} from "../utils/updateUserStats";
 
 /**
  * Detects high-level thematic tags from a poem's text.
@@ -158,6 +159,8 @@ export async function saveHandler(req: AuthRequest, res: Response) {
       },
       {merge: true}
     );
+
+    await updateUserStats(uid, "totalScans");
 
     return res.json({success: true});
   } catch (err: unknown) {
