@@ -37,20 +37,7 @@ initializeFirestore(admin.app(), {preferRest: true});
 
 const app = express();
 
-const defaultAllowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-];
-
-const envOrigins = process.env.FRONTEND_ORIGINS ?
-  process.env.FRONTEND_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean) :
-  [];
-
-const allowedOrigins = [...defaultAllowedOrigins, ...envOrigins];
-
-app.use(cors({
-  origin: allowedOrigins,
-}));
+app.use(cors({origin: true}));
 app.use(express.json({limit: "10mb"}));
 
 app.post("/ocr", ocrHandler);
