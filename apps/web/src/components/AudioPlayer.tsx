@@ -1,7 +1,13 @@
-import {useRef, useState} from "react";
+import {useRef, useState, type ReactNode} from "react";
 import {api} from "../config/api";
 
-export default function AudioPlayer({text}: {text: string}) {
+export default function AudioPlayer({
+  text,
+  secondaryControl,
+}: {
+  text: string;
+  secondaryControl?: ReactNode;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,14 +33,17 @@ export default function AudioPlayer({text}: {text: string}) {
 
   return (
     <div className="mt-4">
-      <button
-        onClick={play}
-        className="px-4 py-2 bg-purple-600 rounded"
-      >
-        {loading ? "Loading..." : "Play Recitation"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={play}
+          className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#d18a4c] hover:bg-[#b96f35] text-sm font-semibold text-white shadow-sm transition-colors"
+        >
+          {loading ? "Loading..." : "Play Recitation"}
+        </button>
+        {secondaryControl}
+      </div>
 
-      <audio ref={audioRef} controls className="mt-3 w-full" />
+      <audio ref={audioRef} controls className="mt-3 w-full h-9" />
     </div>
   );
 }

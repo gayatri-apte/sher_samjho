@@ -11,6 +11,16 @@ import {
 import {generateTashreehLevels} from "./tashreeh";
 import {incrementStat} from "../utils/updateAnalytics";
 
+type CachedOCRData = {
+  tashreeh?: string | import("./tashreeh").TashreehLevels;
+  devanagariText?: string;
+  rawUrdu?: string;
+  confidence?: number;
+  aiGenerated?: boolean;
+  // Allow additional cached fields without strict typing
+  [key: string]: unknown;
+};
+
 /**
  * Normalizes whitespace for display.
  * @param {string} text - Raw text
@@ -41,7 +51,8 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
 
     const textHash = createHash(rawText);
 
-    const cacheRef = admin.firestore()
+    const cacheRef = admin
+      .firestore()
       .collection("global_poetry_cache")
       .doc(textHash);
 
@@ -51,12 +62,33 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
       await cacheRef.update({
         hitCount: admin.firestore.FieldValue.increment(1),
       });
-      const cachedData = cached.data();
+      const cachedData = cached.data() as CachedOCRData;
+
+      // If this is an older cached entry that only has a single
+      // tashreeh string, upgrade it in-place to the multi-level
+      // structure so the Scan page selector shows real levels.
+      let upgradedData = cachedData;
+      if (cachedData && typeof cachedData.tashreeh === "string") {
+        const hasDevanagari =
+          typeof cachedData.devanagariText === "string" &&
+          cachedData.devanagariText.trim() !== "";
+
+        let sourceText: string;
+        if (hasDevanagari) {
+          sourceText = cachedData.devanagariText as string;
+        } else {
+          sourceText = String(cachedData.rawUrdu ?? "");
+        }
+
+        const levels = await generateTashreehLevels(sourceText);
+        await cacheRef.update({tashreeh: levels});
+        upgradedData = {...cachedData, tashreeh: levels};
+      }
       await incrementStat("totalScans");
       res.json({
-        ...cachedData,
-        confidence: cachedData?.confidence ?? 0.85,
-        aiGenerated: cachedData?.aiGenerated ?? true,
+        ...upgradedData,
+        confidence: upgradedData?.confidence ?? 0.85,
+        aiGenerated: upgradedData?.aiGenerated ?? true,
       });
       return;
     }

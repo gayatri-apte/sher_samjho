@@ -28,7 +28,15 @@ export default function PoetExplorer() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white p-10">
+    <div className="min-h-screen bg-[#f8eee3] text-[#3b2419] p-10">
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+      >
+        <span className="text-lg">←</span>
+        <span>Back to Home</span>
+      </button>
       <h1 className="text-4xl mb-8">Poet Explorer</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -36,10 +44,10 @@ export default function PoetExplorer() {
           <div
             key={poet.id}
             onClick={() => navigate(`/explorer/poets/${poet.name}`)}
-            className="bg-neutral-800 p-6 rounded cursor-pointer hover:bg-neutral-700"
+            className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl cursor-pointer hover:bg-[#f6e2cf] transition-colors"
           >
             <h2 className="text-xl font-semibold">{poet.name}</h2>
-            <p className="text-neutral-400">{poet.era}</p>
+            <p className="text-[#94725a]">{poet.era}</p>
           </div>
         ))}
       </div>

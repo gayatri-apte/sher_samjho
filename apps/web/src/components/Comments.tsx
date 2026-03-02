@@ -2,6 +2,8 @@ import {useEffect, useState} from "react";
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   orderBy,
   query,
@@ -74,6 +76,24 @@ export default function Comments({sherId}: Props) {
 
     void fetchComments();
   }, [sherId]);
+
+  async function deleteComment(commentId: string) {
+    if (!sherId) return;
+    if (!isAuthenticated) return;
+    const currentUser = auth.currentUser;
+    const comment = comments.find((c) => c.id === commentId);
+    if (!comment || comment.userId !== currentUser?.uid) return;
+    try {
+      await deleteDoc(
+        doc(db, "global_poetry_cache", sherId, "comments", commentId)
+      );
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message ?? "Failed to delete comment");
+      setTimeout(() => setError(null), 3000);
+    }
+  }
 
   async function addComment() {
     try {
@@ -153,7 +173,7 @@ export default function Comments({sherId}: Props) {
       )}
 
       <textarea
-        className="w-full bg-neutral-800 p-3 rounded resize-none min-h-[80px]"
+        className="w-full bg-[#f6e2cf] border border-[#e2c9ad] text-[#3b2419] placeholder:text-[#c39a79] p-3 rounded-lg resize-none min-h-[80px] focus:outline-none focus:ring-2 focus:ring-[#c26a3b]/40"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Write your thoughts…"
@@ -177,22 +197,38 @@ export default function Comments({sherId}: Props) {
       </div>
 
       {loading && (
-        <p className="mt-4 text-sm text-neutral-400">Loading comments…</p>
+        <p className="mt-4 text-sm text-[#94725a]">Loading comments…</p>
       )}
 
       <div className="mt-6 space-y-4">
-        {comments.map((c) => (
-          <div key={c.id} className="bg-neutral-900 p-4 rounded">
-            <p>{c.text}</p>
-            {c.userEmail && (
-              <p className="text-sm text-neutral-400 mt-2">
-                {c.userEmail}
-              </p>
-            )}
-          </div>
-        ))}
+        {comments.map((c) => {
+          const currentUser = auth.currentUser;
+          const isAuthor = !!currentUser && c.userId === currentUser.uid;
+          return (
+            <div
+              key={c.id}
+              className="bg-[#fff7ef] border border-[#e2c9ad] p-4 rounded-xl"
+            >
+              <p className="text-[#3b2419]">{c.text}</p>
+              {c.userEmail && (
+                <p className="text-sm text-[#94725a] mt-2">
+                  {c.userEmail}
+                </p>
+              )}
+              {isAuthor && (
+                <button
+                  type="button"
+                  onClick={() => deleteComment(c.id)}
+                  className="mt-2 text-xs text-red-500 hover:text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+          );
+        })}
         {!loading && comments.length === 0 && (
-          <p className="text-sm text-neutral-500">No comments yet.</p>
+          <p className="text-sm text-[#94725a]">No comments yet.</p>
         )}
       </div>
     </div>

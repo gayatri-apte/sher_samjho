@@ -1,8 +1,10 @@
 import {useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 export default function EraExplorerPage() {
   const [results, setResults] = useState<any[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const navigate = useNavigate();
 
   async function searchEra(era: string) {
     console.log("Clicked era:", era);
@@ -25,6 +27,14 @@ export default function EraExplorerPage() {
 
   return (
     <div className="p-8">
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+      >
+        <span className="text-lg">←</span>
+        <span>Back to Home</span>
+      </button>
       <h1 className="text-2xl mb-6">Era Explorer</h1>
 
       <div className="flex gap-4 mb-6">

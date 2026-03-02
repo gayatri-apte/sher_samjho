@@ -87,9 +87,9 @@ export default function Recorder({sherId}: {sherId: string}) {
   }
 
   return (
-    <div className="mt-4">
+    <div>
       {error && (
-        <p className="text-amber-400 text-sm mb-2" role="alert">
+        <p className="text-[#b35c3a] text-sm mb-2" role="alert">
           {error}
         </p>
       )}
@@ -98,7 +98,7 @@ export default function Recorder({sherId}: {sherId: string}) {
           type="button"
           onClick={startRecording}
           disabled={uploading}
-          className="bg-red-600 hover:bg-red-500 disabled:opacity-50 px-4 py-2 rounded text-white text-sm font-medium"
+          className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#f6d3b5] hover:bg-[#ecbf98] disabled:opacity-50 text-sm font-medium text-[#5a321c] shadow-sm transition-colors"
         >
           {uploading ? "Saving…" : "Record Recitation"}
         </button>
@@ -106,7 +106,7 @@ export default function Recorder({sherId}: {sherId: string}) {
         <button
           type="button"
           onClick={stopRecording}
-          className="bg-neutral-600 hover:bg-neutral-500 px-4 py-2 rounded text-white text-sm font-medium"
+          className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#5a321c] hover:bg-[#3e2213] text-white text-sm font-medium shadow-sm transition-colors"
         >
           Stop
         </button>

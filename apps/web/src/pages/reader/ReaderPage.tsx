@@ -1,143 +1,96 @@
-import {useEffect, useState} from "react";
-import {Link, useLocation} from "react-router-dom";
-import {collection, getDocs, query, where} from "firebase/firestore";
-import {db} from "../../services/firebase";
-import Comments from "../../components/Comments";
-import FollowPoet from "../../components/FollowPoet";
-import ShareCard from "../../components/ShareCard";
-import AudioPlayer from "../../components/AudioPlayer";
-import Recorder from "../../components/Recorder";
-import OfficialRecitations from "../../components/OfficialRecitations.tsx";
-import {useAuth} from "../../hooks/useAuth";
+import {Link, useLocation, useNavigate} from "react-router-dom";
 
 export default function ReaderPage() {
-  const {state} = useLocation();
-  const text = state?.text;
-  const explanation = state?.explanation ?? state?.tashreeh ?? "";
-  const ocrConfidence = typeof state?.ocrConfidence === "number" ? state.ocrConfidence : null;
-  const attributionConfidence =
-    typeof state?.attributionConfidence === "number" ?
-      state.attributionConfidence :
-      null;
-  const {isAuthenticated} = useAuth();
-  const [poet, setPoet] = useState(state?.poet ?? "");
-  const [similar, setSimilar] = useState<any[]>([]);
-  const sherId: string | undefined =
+  const navigate = useNavigate();
+  const {state} = useLocation() as {
+    state?: {
+      text?: string;
+      cacheHash?: string;
+      explanation?: string;
+      tashreeh?: string;
+      poet?: string;
+      ocrConfidence?: number;
+      attributionConfidence?: number;
+    };
+  };
+  const text = state?.text?.trim() ?? "";
+  const sherId =
     state?.cacheHash && typeof state.cacheHash === "string"
       ? state.cacheHash
       : undefined;
 
-  useEffect(() => {
-    async function fetchSimilar() {
-      if (!poet) return;
-
-      const q = query(
-        collection(db, "global_poetry_cache"),
-        where("poet", "==", poet)
-      );
-
-      const snap = await getDocs(q);
-      const data = snap.docs.map((doc) => doc.data());
-      setSimilar(data.slice(0, 3));
-    }
-
-    fetchSimilar();
-  }, [poet]);
-
   if (!text) {
     return (
-      <div className="min-h-screen bg-black text-neutral-400 flex flex-col items-center justify-center gap-4 px-6">
-        <p>No text to read yet.</p>
-        <p className="text-neutral-500 text-sm text-center max-w-sm">
-          Open a sher from <Link to="/search" className="text-blue-400 hover:underline">Search</Link> or{" "}
-          <Link to="/history" className="text-blue-400 hover:underline">History</Link> to read it here.
-        </p>
+      <div
+        className="min-h-screen text-[#6b4a33] flex flex-col px-6 py-8 relative bg-cover bg-no-repeat bg-center"
+        style={{backgroundImage: "url('/images/background-lanterns.png')"}}
+      >
+        <div className="absolute top-6 left-6">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e2c9ad] bg-[#fff7ef] text-[#c26a3b] hover:bg-[#f6e2cf] hover:text-[#a9552a] text-sm font-medium transition-colors"
+          >
+            <span aria-hidden>←</span>
+            <span>Back to Home</span>
+          </button>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 flex-1">
+          <p>No text to read yet.</p>
+          <p className="text-sm text-center max-w-sm text-[#94725a]">
+            Open a sher from{" "}
+            <Link to="/search" className="text-[#c26a3b] hover:underline">Search</Link> or{" "}
+            <Link to="/history" className="text-[#c26a3b] hover:underline">History</Link> to read it here.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-neutral-100 px-12 py-20">
-      <div className="mb-6 flex items-center gap-4">
-        <label className="text-sm text-neutral-400">
-          Poet
-        </label>
-        <select
-          value={poet}
-          onChange={(e) => setPoet(e.target.value)}
-          className="bg-neutral-800 text-neutral-100 text-sm px-3 py-2 rounded border border-neutral-700"
-        >
-          <option value="">Unknown Poet</option>
-          <option value="Mirza Ghalib">Mirza Ghalib</option>
-          <option value="Mir Taqi Mir">Mir Taqi Mir</option>
-          <option value="Faiz Ahmed Faiz">Faiz Ahmed Faiz</option>
-        </select>
-        {poet && <FollowPoet poetId={poet} />}
-      </div>
-
-      <div className="text-2xl leading-loose tracking-wide font-serif whitespace-pre-wrap">
-        {text.split("\n").map((line: string, lineIdx: number) => (
-          <p key={lineIdx}>
-            {line.split(/\s+/).filter(Boolean).map((w: string, i: number) => (
-              <span key={i} className="mx-1 hover:bg-yellow-500">
-                {w}
-              </span>
-            ))}
-          </p>
-        ))}
-      </div>
-
-      <AudioPlayer text={text} />
-
-      {sherId && isAuthenticated && <Recorder sherId={sherId} />}
-
-      {sherId && <OfficialRecitations sherId={sherId} />}
-
-      <ShareCard text={text} poet={poet} />
-
-      {sherId && (
-        <p className="mt-4">
-          <Link
-            to="/poetry-ai"
-            state={{ cacheHash: sherId }}
-            className="text-indigo-400 hover:underline"
+    <div
+      className="min-h-[calc(100vh-64px)] text-[#3b2419] flex flex-col px-4 sm:px-8 py-6 sm:py-10 bg-cover bg-no-repeat bg-center"
+      style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+    >
+      <div className="max-w-5xl mx-auto w-full flex-1 flex flex-col">
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e2c9ad] bg-[#fff7ef] text-[#c26a3b] hover:bg-[#f6e2cf] hover:text-[#a9552a] text-sm font-medium transition-colors"
           >
-            Ask the AI about this sher →
-          </Link>
-        </p>
-      )}
-
-      {ocrConfidence != null && (
-        <p className="text-sm text-neutral-400 mt-4">
-          OCR Confidence: {(ocrConfidence * 100).toFixed(1)}%
-        </p>
-      )}
-
-      {attributionConfidence != null && (
-        <p className="text-sm text-neutral-400">
-          Attribution Confidence:{" "}
-          {attributionConfidence === 1 ? "Confirmed" : "Unverified"}
-        </p>
-      )}
-
-      {explanation && (
-        <div className="mt-10 text-lg leading-relaxed text-neutral-200 whitespace-pre-wrap">
-          {explanation}
+            <span aria-hidden>←</span>
+            <span>Back</span>
+          </button>
         </div>
-      )}
 
-      {similar.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-2xl mt-12 mb-4">Similar Shers</h2>
-          {similar.map((item, i) => (
-            <div key={i} className="mb-4 text-neutral-300">
-              {item.text}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full text-center">
+            <p className="text-[11px] tracking-[0.3em] uppercase text-[#b08a6a] mb-4">
+              Reading mode
+            </p>
+            <div className="rounded-3xl bg-[#fff7ef] border border-[#e2c9ad] px-6 sm:px-10 py-10 sm:py-16 shadow-md">
+              <div className="whitespace-pre-wrap break-words text-3xl sm:text-4xl md:text-5xl leading-relaxed font-semibold tracking-wide">
+                {text}
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      <Comments sherId={sherId} />
+            {sherId && (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/poetry-ai/${encodeURIComponent(sherId)}`, {
+                    state,
+                  })
+                }
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#e2c9ad] bg-[#fff7ef] text-[#c26a3b] hover:bg-[#f6e2cf] hover:text-[#a9552a] text-sm font-medium transition-colors"
+              >
+                <span>Ask the AI about this sher</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

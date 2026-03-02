@@ -41,29 +41,79 @@ export default function HistoryPage() {
   }, []);
 
   if (loading) {
-    return <p className="p-6 text-neutral-400">Loading history…</p>;
+    return (
+      <div
+        className="min-h-screen p-6 bg-cover bg-no-repeat bg-center"
+        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+        >
+          <span className="text-lg">←</span>
+          <span>Back to Home</span>
+        </button>
+        <p className="text-[#94725a]">Loading history…</p>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="p-6 text-red-400">
-        Error loading history: {error}
+      <div
+        className="min-h-screen p-6 bg-cover bg-no-repeat bg-center"
+        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+        >
+          <span className="text-lg">←</span>
+          <span>Back to Home</span>
+        </button>
+        <p className="text-red-500">Error loading history: {error}</p>
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <p className="p-6 text-neutral-400">
-        No scans yet. Scan poetry to build your history.
-      </p>
+      <div
+        className="min-h-screen p-6 bg-cover bg-no-repeat bg-center"
+        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+        >
+          <span className="text-lg">←</span>
+          <span>Back to Home</span>
+        </button>
+        <p className="text-[#94725a]">
+          No scans yet. Scan poetry to build your history.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] w-full overflow-x-hidden overflow-y-auto">
+    <div
+      className="min-h-screen w-full overflow-x-hidden overflow-y-auto bg-cover bg-no-repeat bg-center"
+      style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+    >
       <div className="p-6 max-w-4xl mx-auto space-y-4 w-full min-w-0 box-border">
-        <h1 className="text-2xl font-semibold mb-4">Scan History</h1>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+        >
+          <span className="text-lg">←</span>
+          <span>Back to Home</span>
+        </button>
+        <h1 className="text-2xl font-semibold mb-4 text-[#3b2419]">Scan History</h1>
 
         {items.map((item) => (
           <div
@@ -80,13 +130,13 @@ export default function HistoryPage() {
                 },
               })
             }
-            className="p-4 rounded-lg bg-neutral-800 border border-neutral-700 cursor-pointer hover:border-blue-500 hover:bg-neutral-700 transition w-full min-w-0 overflow-hidden"
+            className="p-4 rounded-xl bg-[#fff7ef] border border-[#e2c9ad] cursor-pointer hover:border-[#c26a3b] hover:bg-[#f6e2cf] transition w-full min-w-0 overflow-hidden"
           >
-            <p className="text-neutral-200 whitespace-pre-wrap line-clamp-4 break-words min-w-0">
+            <p className="text-[#3b2419] whitespace-pre-wrap line-clamp-4 break-words min-w-0">
               {item.text || item.cacheHash || item.id}
             </p>
 
-            <div className="mt-2 text-sm text-neutral-400">
+            <div className="mt-2 text-sm text-[#94725a]">
               {formatDate(item.createdAt)}
             </div>
           </div>

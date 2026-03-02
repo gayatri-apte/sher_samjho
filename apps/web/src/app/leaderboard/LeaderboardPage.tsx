@@ -1,4 +1,5 @@
 import {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
 import {api} from "../../config/api";
 
 type LeaderboardUser = {
@@ -15,6 +16,7 @@ export default function LeaderboardPage() {
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -54,24 +56,52 @@ export default function LeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white p-8 flex items-center justify-center">
-        <p className="text-neutral-400">Loading leaderboard…</p>
+      <div className="min-h-screen bg-[#f8eee3] text-[#3b2419] p-8 flex items-center justify-center">
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+          >
+            <span className="text-lg">←</span>
+            <span>Back to Home</span>
+          </button>
+          <p className="text-[#94725a]">Loading leaderboard…</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black text-white p-8 flex items-center justify-center">
-        <p className="text-amber-400" role="alert">
-          {error}
-        </p>
+      <div className="min-h-screen bg-[#f8eee3] text-[#3b2419] p-8 flex items-center justify-center">
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+          >
+            <span className="text-lg">←</span>
+            <span>Back to Home</span>
+          </button>
+          <p className="text-amber-700" role="alert">
+            {error}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <div className="min-h-screen bg-[#f8eee3] text-[#3b2419] p-8">
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+      >
+        <span className="text-lg">←</span>
+        <span>Back to Home</span>
+      </button>
       <h1 className="text-3xl mb-6">Top Learners</h1>
 
       {users.length === 0 && (
@@ -82,16 +112,16 @@ export default function LeaderboardPage() {
         {users.map((u, i) => (
           <div
             key={u.id}
-            className="flex justify-between items-center p-3 bg-neutral-900 rounded"
+            className="flex justify-between items-center p-3 bg-[#fff7ef] border border-[#e2c9ad] rounded-xl"
           >
-            <span className="text-neutral-400">#{i + 1}</span>
+            <span className="text-[#94725a]">#{i + 1}</span>
             <span className="flex-1 mx-4 truncate">
               {u.displayName || u.id}
             </span>
-            <span className="text-sm text-neutral-300">
+            <span className="text-sm text-[#5a3a28]">
               {(u.currentStreak ?? u.longestStreak ?? 0)} day streak
             </span>
-            <span className="text-sm text-neutral-500 ml-4">
+            <span className="text-sm text-[#b08a6a] ml-4">
               {u.totalReviews ?? 0} reviews
             </span>
           </div>

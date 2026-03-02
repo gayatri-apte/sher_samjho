@@ -59,7 +59,7 @@ export default function CameraCapture({ onCapture }: Props) {
       {!stream && (
         <button
           onClick={startCamera}
-          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700"
+          className="px-5 py-2.5 rounded-xl bg-[#c26a3b] hover:bg-[#a9552a] text-white text-sm font-semibold shadow-md shadow-[#c26a3b]/30"
         >
           Open Camera
         </button>

@@ -75,42 +75,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center h-[calc(100vh-64px)] px-4">
-      <div className="w-full max-w-sm rounded-xl border border-neutral-800 p-6 bg-neutral-900">
-        <h2 className="text-2xl font-semibold mb-6 text-center">Login</h2>
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-10 bg-cover bg-no-repeat bg-center"
+      style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+    >
+      <div className="w-full max-w-md rounded-2xl border border-[#e2c9ad] p-8 bg-[#fff7ef] shadow-xl">
+        <div className="mb-6 text-center">
+          <p className="text-xs tracking-[0.2em] uppercase text-[#a58668]">
+            Sher Samjho
+          </p>
+          <h2 className="text-2xl font-semibold mt-2 text-[#3b2419]">
+            Welcome back
+          </h2>
+          <p className="text-sm text-[#94725a] mt-1">
+            Sign in to continue your poetry journey.
+          </p>
+        </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-neutral-800 border border-neutral-700"
-          />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-[#5a3a28]">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-[#f6e2cf] border border-[#e2c9ad] placeholder:text-[#c39a79] text-sm focus:outline-none focus:ring-2 focus:ring-[#c26a3b]/50"
+              placeholder="you@example.com"
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-neutral-800 border border-neutral-700"
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-[#5a3a28]">
+                Password
+              </label>
+              <button
+                type="button"
+                className="text-xs text-[#c26a3b] hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-[#f6e2cf] border border-[#e2c9ad] placeholder:text-[#c39a79] text-sm focus:outline-none focus:ring-2 focus:ring-[#c26a3b]/50"
+              placeholder="Enter your password"
+            />
+          </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2.5 rounded-lg bg-[#c26a3b] hover:bg-[#a9552a] text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? "Signing in..." : "Continue"}
           </button>
         </form>
 
-        {/* 🔹 Google Login Button (ADDED) */}
+        <p className="mt-3 text-[11px] text-center text-[#b08a6a]">
+          By continuing, you agree to our{" "}
+          <span className="underline">Terms</span> and{" "}
+          <span className="underline">Privacy Policy</span>.
+        </p>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-[#e7cfb4]" />
+          <span className="text-xs text-[#b08a6a] uppercase tracking-[0.2em]">
+            Or continue with
+          </span>
+          <div className="h-px flex-1 bg-[#e7cfb4]" />
+        </div>
+
+        {/* 🔹 Google Login Button */}
         <button
           onClick={loginWithGoogle}
-          className="w-full py-3 mt-4 rounded-xl bg-white text-black font-medium"
+          className="w-full py-2.5 rounded-lg bg-white text-[#3b2419] text-sm font-medium border border-[#e2c9ad] hover:bg-[#fff3e4] transition-colors"
         >
           Continue with Google
         </button>
@@ -137,40 +182,47 @@ export default function LoginPage() {
             }}
           }
           disabled={loading}
-          className="w-full py-2 mt-3 rounded border border-neutral-600 text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+          className="w-full py-2 mt-3 rounded-lg border border-[#e2c9ad] text-[#3b2419] text-sm hover:bg-[#f6e2cf] disabled:opacity-50 transition-colors"
         >
           Continue as guest
         </button>
 
-        {/* 🔹 Phone OTP Login (ADDED) */}
-        <div className="mt-6 space-y-3">
-          <input
-            placeholder="+91XXXXXXXXXX"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-neutral-800 border border-neutral-700"
-          />
+        {/* 🔹 Phone OTP Login */}
+        <div className="mt-6 pt-5 border-t border-[#e7cfb4] space-y-3">
+          <p className="text-xs font-medium text-[#5a3a28]">
+            Prefer using your phone?
+          </p>
+          <div className="space-y-2">
+            <input
+              placeholder="+91XXXXXXXXXX"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-[#f6e2cf] border border-[#e2c9ad] placeholder:text-[#c39a79] text-sm focus:outline-none focus:ring-2 focus:ring-[#c26a3b]/40"
+            />
 
-          <button
-            onClick={sendOTP}
-            className="w-full py-2 rounded bg-neutral-700"
-          >
-            Send OTP
-          </button>
+            <button
+              onClick={sendOTP}
+              className="w-full py-2 rounded-lg bg-[#e2c9ad] text-[#3b2419] text-sm hover:bg-[#d6b897] transition-colors"
+            >
+              Send OTP
+            </button>
+          </div>
 
-          <input
-            placeholder="Enter OTP"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-neutral-800 border border-neutral-700"
-          />
+          <div className="space-y-2">
+            <input
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-[#f6e2cf] border border-[#e2c9ad] placeholder:text-[#c39a79] text-sm focus:outline-none focus:ring-2 focus:ring-[#c26a3b]/40"
+            />
 
-          <button
-            onClick={verifyOTP}
-            className="w-full py-2 rounded bg-green-600"
-          >
-            Verify OTP
-          </button>
+            <button
+              onClick={verifyOTP}
+              className="w-full py-2 rounded-lg bg-[#4c9a5a] text-white text-sm hover:bg-[#3c7a48] transition-colors"
+            >
+              Verify OTP
+            </button>
+          </div>
         </div>
 
         {/* 🔹 Recaptcha Container (REQUIRED) */}

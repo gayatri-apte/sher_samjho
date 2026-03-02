@@ -28,7 +28,34 @@ export async function moodSearch(req: Request, res: Response) {
     return res.status(400).json({error: "Mood required"});
   }
 
-  const moodEmbedding = await createEmbedding(String(mood));
+  const normalizedMood = String(mood).trim().toLowerCase();
+
+  // 1) Prefer explicit mood tags on documents if available
+  const taggedSnap = await db
+    .collection("global_poetry_cache")
+    .where("mood", "==", normalizedMood)
+    .limit(20)
+    .get();
+
+  if (!taggedSnap.empty) {
+    const taggedResults = taggedSnap.docs.map((doc) => doc.data());
+    return res.json(taggedResults);
+  }
+
+  // 2) Fallback: if there's a "moods" array, use that
+  const arrayTaggedSnap = await db
+    .collection("global_poetry_cache")
+    .where("moods", "array-contains", normalizedMood)
+    .limit(20)
+    .get();
+
+  if (!arrayTaggedSnap.empty) {
+    const arrayTaggedResults = arrayTaggedSnap.docs.map((doc) => doc.data());
+    return res.json(arrayTaggedResults);
+  }
+
+  // 3) Last resort: embedding-based similarity across whole corpus
+  const moodEmbedding = await createEmbedding(normalizedMood);
 
   const snaps = await db.collection("global_poetry_cache").get();
 

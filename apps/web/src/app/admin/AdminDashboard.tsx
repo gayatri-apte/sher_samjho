@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import {getAuth} from "firebase/auth";
+import {useNavigate} from "react-router-dom";
 import {api} from "../../config/api";
 
 type AnalyticsData = {
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const auth = getAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -70,18 +72,40 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white p-10">
+      <div
+        className="min-h-screen text-[#3b2419] p-10 bg-cover bg-no-repeat bg-center"
+        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+        >
+          <span className="text-lg">←</span>
+          <span>Back to Home</span>
+        </button>
         <h1 className="text-3xl mb-8">Admin Analytics</h1>
-        <p className="text-neutral-400">Loading analytics…</p>
+        <p className="text-[#94725a]">Loading analytics…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black text-white p-10">
+      <div
+        className="min-h-screen text-[#3b2419] p-10 bg-cover bg-no-repeat bg-center"
+        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+        >
+          <span className="text-lg">←</span>
+          <span>Back to Home</span>
+        </button>
         <h1 className="text-3xl mb-8">Admin Analytics</h1>
-        <p className="text-amber-400" role="alert">
+        <p className="text-amber-700" role="alert">
           {error}
         </p>
       </div>
@@ -89,7 +113,18 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-10">
+    <div
+      className="min-h-screen text-[#3b2419] p-10 bg-cover bg-no-repeat bg-center"
+      style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+    >
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
+      >
+        <span className="text-lg">←</span>
+        <span>Back to Home</span>
+      </button>
       <h1 className="text-3xl mb-8">Admin Analytics</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -111,8 +146,8 @@ type CardProps = {
 
 function Card({title, value}: CardProps) {
   return (
-    <div className="bg-neutral-900 p-6 rounded-xl shadow-lg">
-      <p className="text-gray-400">{title}</p>
+    <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
+      <p className="text-[#94725a]">{title}</p>
       <h2 className="text-2xl mt-2">{value ?? 0}</h2>
     </div>
   );

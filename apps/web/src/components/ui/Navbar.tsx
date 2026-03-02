@@ -12,10 +12,10 @@ export default function Navbar() {
 
   const linkClass = (path: string) =>
     location.pathname === path
-      ? "text-blue-400"
-      : "hover:text-blue-400";
+      ? "text-[#c26a3b]"
+      : "hover:text-[#c26a3b]";
 
-  const unauthenticatedLinkClass = "hover:text-blue-400 cursor-pointer";
+  const unauthenticatedLinkClass = "hover:text-[#c26a3b] cursor-pointer";
 
   async function handleLogout() {
     await logout();
@@ -49,7 +49,7 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="h-16 flex items-center gap-6 px-4 sm:px-6 border-b border-neutral-800 min-w-0 shrink-0">
+    <nav className="h-16 flex items-center gap-6 px-4 sm:px-6 border-b border-[#e2c9ad] bg-[#fdf4ea]/80 backdrop-blur-sm min-w-0 shrink-0">
       {mainNavItems.map(({path, label}) =>
         isAuthenticated ? (
           <Link key={path} to={path} className={linkClass(path)}>
@@ -74,8 +74,8 @@ export default function Navbar() {
               onClick={() => setMoreOpen((o) => !o)}
               className={
                 moreNavItems.some(({path}) => location.pathname === path)
-                  ? "text-blue-400"
-                  : "hover:text-blue-400"
+                  ? "text-[#c26a3b]"
+                  : "hover:text-[#c26a3b]"
               }
               aria-expanded={moreOpen}
               aria-haspopup="true"
@@ -84,7 +84,7 @@ export default function Navbar() {
             </button>
             {moreOpen && (
               <div
-                className="absolute left-0 top-full mt-1 py-2 w-40 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl z-50"
+                className="absolute left-0 top-full mt-1 py-2 w-40 rounded-lg border border-[#e2c9ad] bg-[#fff7ef] shadow-xl z-50"
                 role="menu"
               >
                 {moreNavItems.map(({path, label}) => (
@@ -114,7 +114,7 @@ export default function Navbar() {
             </button>
             {moreOpen && (
               <div
-                className="absolute left-0 top-full mt-1 py-2 w-40 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl z-50"
+                className="absolute left-0 top-full mt-1 py-2 w-40 rounded-lg border border-[#e2c9ad] bg-[#fff7ef] shadow-xl z-50"
                 role="menu"
               >
                 {moreNavItems.map(({path, label}) => (
@@ -122,7 +122,7 @@ export default function Navbar() {
                     key={path}
                     to="/login"
                     role="menuitem"
-                    className="block px-4 py-2 text-sm hover:text-blue-400"
+                    className="block px-4 py-2 text-sm hover:text-[#c26a3b]"
                     onClick={() => setMoreOpen(false)}
                   >
                     {label}
