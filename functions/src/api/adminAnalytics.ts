@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
 import {getFirestore} from "firebase-admin/firestore";
+import {getAuth} from "firebase-admin/auth";
 
 /**
  * GET /admin-analytics
@@ -14,7 +15,16 @@ export async function adminAnalytics(
   res: Response
 ): Promise<void> {
   try {
-    if (!req.headers.authorization) {
+    const header = req.headers.authorization || "";
+    if (!header.startsWith("Bearer ")) {
+      res.status(403).json({error: "Unauthorized"});
+      return;
+    }
+
+    const token = header.replace("Bearer ", "").trim();
+    const decoded = await getAuth().verifyIdToken(token);
+
+    if (!decoded.admin) {
       res.status(403).json({error: "Unauthorized"});
       return;
     }

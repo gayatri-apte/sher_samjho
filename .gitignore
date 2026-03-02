@@ -1,1 +1,17 @@
 node_modules/
+
+# Environment files (never commit secrets)
+.env
+.env.*
+apps/web/.env
+functions/.env
+
+# Firebase runtime config and service accounts
+.runtimeconfig.json
+functions/internship.json
+functions/service-account.json
+functions/firebase_config.json
+
+# macOS filesystem noise
+.DS_Store
+apps/.DS_Store
