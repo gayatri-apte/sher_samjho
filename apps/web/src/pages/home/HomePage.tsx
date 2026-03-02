@@ -11,6 +11,8 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import { logout } from "../../services/auth.service";
 
 type SidebarItemProps = {
   icon: ReactNode;
@@ -27,19 +29,35 @@ type FeatureCardProps = {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+
+  async function handleLogout() {
+    await logout();
+    navigate("/login");
+  }
 
   return (
     <div
       className="relative flex min-h-screen text-[#5b4636] bg-cover bg-no-repeat bg-center"
       style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
     >
-      <button
-        type="button"
-        onClick={() => navigate("/login")}
-        className="absolute top-6 right-6 z-10 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#d39a69] text-[#5a321c] text-sm font-semibold shadow-sm hover:bg-[#c78956] transition-colors"
-      >
-        Login
-      </button>
+      {!isAuthenticated ? (
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="absolute top-6 right-6 z-10 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#d39a69] text-[#5a321c] text-sm font-semibold shadow-sm hover:bg-[#c78956] transition-colors"
+        >
+          Login
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="absolute top-6 right-6 z-10 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#fff7ef] text-[#8b4513] text-sm font-semibold shadow-sm border border-[#e2c9ad] hover:bg-[#f6e2cf] transition-colors"
+        >
+          Logout
+        </button>
+      )}
       {/* SIDEBAR */}
       <aside className="w-64 flex-shrink-0 flex flex-col justify-between bg-[#efe7df] border-r border-[#e2d7cc]">
         <div>
@@ -108,11 +126,15 @@ export default function HomePage() {
         >
           <div className="flex items-center gap-3">
             <div className="bg-orange-500 text-white w-9 h-9 flex items-center justify-center rounded-full">
-              U
+              {(user?.email?.[0] || user?.displayName?.[0] || "U").toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-medium">User Profile</p>
-              <p className="text-xs text-gray-500">View settings</p>
+              <p className="text-sm font-medium">
+                {user?.displayName || "User Profile"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {user?.email || "View settings"}
+              </p>
             </div>
           </div>
         </button>
