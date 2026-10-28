@@ -46,8 +46,22 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const buffer = Buffer.from(req.body.image, "base64");
-    const rawText = await extractTextFromImage(buffer);
+    const image = String(req.body.image).replace(/^data:[^,]+,/, "");
+    const buffer = Buffer.from(image, "base64");
+    if (buffer.length > 8 * 1024 * 1024) {
+      res.status(413).json({error: "Image too large (max 8 MB)."});
+      return;
+    }
+    const rawText = (await extractTextFromImage(buffer)).trim();
+
+    // No text detected: do NOT cache an empty "sher" under hash("").
+    if (rawText.replace(/[\s\p{P}\d]/gu, "").length < 3) {
+      res.status(422).json({
+        error: "No poetry text found in this image. Try a clearer, " +
+          "well-lit photo of the printed sher.",
+      });
+      return;
+    }
 
     const textHash = createHash(rawText);
 
@@ -85,8 +99,12 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
         upgradedData = {...cachedData, tashreeh: levels};
       }
       await incrementStat("totalScans");
+      // never send the 3k-float embedding / keyword arrays to the browser
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const {embedding, keywords, ...publicData} = upgradedData;
       res.json({
-        ...upgradedData,
+        ...publicData,
+        textHash,
         confidence: upgradedData?.confidence ?? 0.85,
         aiGenerated: upgradedData?.aiGenerated ?? true,
       });
@@ -137,9 +155,9 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
     console.error("OCR error details:", errorDetails);
     res.status(500).json({
       error: "OCR failed",
-      message: errorMessage,
-      details: process.env.NODE_ENV === "development" ?
-        errorDetails : undefined,
+      message: errorMessage.startsWith("Gemini:") ?
+        errorMessage.replace(/^Gemini: /, "") :
+        "Could not read this image. Please try again.",
     });
   }
 }

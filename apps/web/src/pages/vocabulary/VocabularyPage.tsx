@@ -1,177 +1,192 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Mic2, BookMarked } from "lucide-react";
+import Page, { Card, ErrorNote } from "../../components/ui/Page";
+import SpeakButton from "../../components/voice/SpeakButton";
 import {
   fetchVocabulary,
   reviewVocabulary,
   type VocabularyItem,
 } from "../../services/functions.service";
 
-function formatTimestamp(value: unknown): string {
-  if (value == null) return "—";
-  const o = value as { seconds?: number; nanoseconds?: number };
-  if (typeof o?.seconds === "number") {
-    return new Date(o.seconds * 1000).toLocaleString();
-  }
-  if (value instanceof Date) return value.toLocaleString();
-  return "—";
+const GRADES = [
+  { q: 1, label: "Again", hint: "forgot", cls: "bg-[#fdecea] text-[#8a2a1a] border-[#e9b4a4]" },
+  { q: 3, label: "Hard", hint: "", cls: "bg-[#fdf3e4] text-[#8a5a12] border-[#ecd0a0]" },
+  { q: 4, label: "Good", hint: "", cls: "bg-[#e6f2e4] text-[#24502a] border-[#b7d7b0]" },
+  { q: 5, label: "Easy", hint: "", cls: "bg-[#e2eef6] text-[#1f4a6b] border-[#b3cfe3]" },
+];
+
+function dueLabel(w: VocabularyItem) {
+  if (w.isDue) return "due now";
+  if (!w.dueAt) return "";
+  const days = Math.ceil((w.dueAt - Date.now()) / 86400000);
+  return days <= 1 ? "due tomorrow" : `due in ${days} days`;
 }
 
 export default function VocabularyPage() {
-  const navigate = useNavigate();
   const [words, setWords] = useState<VocabularyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
-  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
     fetchVocabulary()
-      .then((list) => {
-        if (!cancelled) setWords(list);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load vocabulary");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then(setWords)
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load vocabulary"))
+      .finally(() => setLoading(false));
   }, []);
 
-  async function handleReview(wordId: string, quality: number) {
-    setReviewError(null);
-    setReviewingId(wordId);
+  const due = useMemo(() => words.filter((w) => w.isDue), [words]);
+  const card = due[0];
+
+  async function grade(id: string, q: number) {
+    setBusy(true);
     try {
-      const { strength } = await reviewVocabulary(wordId, quality);
+      const r = await reviewVocabulary(id, q);
       setWords((prev) =>
         prev.map((w) =>
-          w.id === wordId ? { ...w, strength, lastReviewed: new Date() } : w
-        )
+          w.id === id
+            ? { ...w, strength: r.strength, interval: r.interval, dueAt: r.dueAt, isDue: false }
+            : w,
+        ),
       );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Review failed";
-      setReviewError(message);
-      console.error("Review failed:", err);
+      setRevealed(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Review failed");
     } finally {
-      setReviewingId(null);
+      setBusy(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen bg-cover bg-no-repeat bg-center"
-        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
-      >
-        <div className="max-w-4xl mx-auto p-6">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-          >
-            <span className="text-lg">←</span>
-            <span>Back to Home</span>
-          </button>
-          <h2 className="text-3xl mb-4 text-[#3b2419]">My Vocabulary</h2>
-          <p className="text-[#94725a]">Loading…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        className="min-h-screen bg-cover bg-no-repeat bg-center"
-        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
-      >
-        <div className="max-w-4xl mx-auto p-6">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-          >
-            <span className="text-lg">←</span>
-            <span>Back to Home</span>
-          </button>
-          <h2 className="text-3xl mb-4 text-[#3b2419]">My Vocabulary</h2>
-          <p className="text-red-500">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className="min-h-screen bg-cover bg-no-repeat bg-center"
-      style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
+    <Page
+      title="Practice deck"
+      subtitle="Words you looked up and words Ustad caught you mispronouncing, scheduled with spaced repetition (SM-2) so each one comes back just before you'd forget it."
     >
-      <div className="max-w-4xl mx-auto p-6">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-        >
-          <span className="text-lg">←</span>
-          <span>Back to Home</span>
-        </button>
-        <h2 className="text-3xl mb-4 text-[#3b2419]">My Vocabulary</h2>
-        <p className="text-sm text-[#94725a] mb-6">
-          Tap a word on the Scan page to look it up and save it here. Rate how well you knew it (0–5) to update strength (spaced repetition).
-        </p>
+      {error && <ErrorNote>{error}</ErrorNote>}
+      {loading ? (
+        <p className="text-[#94725a]">Loading…</p>
+      ) : words.length === 0 ? (
+        <Card className="text-center">
+          <BookMarked className="mx-auto text-[#c26a3b]" />
+          <p className="mt-3 text-[#7d5b44]">
+            Your deck is empty. Tap words on a scanned sher, or recite with{" "}
+            <Link to="/ustad" className="text-[#c26a3b] underline">Ustad</Link> — mispronounced words land here.
+          </p>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {[
+              ["Due now", due.length],
+              ["In deck", words.length],
+              ["Mastered", words.filter((w) => w.strength >= 80).length],
+            ].map(([k, v]) => (
+              <Card key={k as string} className="!p-4 text-center">
+                <div className="text-2xl font-bold tabular-nums text-[#5a2e14]">{v}</div>
+                <div className="text-xs text-[#94725a]">{k}</div>
+              </Card>
+            ))}
+          </div>
 
-      {reviewError && (
-        <p className="mb-4 p-3 rounded-lg bg-red-100 border border-red-300 text-red-700 text-sm">
-          {reviewError}
-        </p>
-      )}
+          {!reviewMode && due.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setReviewMode(true)}
+              className="mb-6 w-full py-3 rounded-full bg-[#c26a3b] hover:bg-[#a9552a] text-white font-medium"
+            >
+              Review {due.length} due word{due.length > 1 ? "s" : ""}
+            </button>
+          )}
 
-        {words.length === 0 ? (
-          <p className="text-[#94725a]">No words saved yet. Scan poetry and tap words to add them.</p>
-        ) : (
+          {reviewMode && (
+            <Card className="mb-8 text-center">
+              {card ? (
+                <>
+                  <span className="text-xs uppercase tracking-[0.25em] text-[#b08a6a]">
+                    {due.length} left
+                  </span>
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <span className="font-deva text-4xl text-[#3b2419]">{card.word}</span>
+                    <SpeakButton text={card.word} compact />
+                    <SpeakButton text={card.word} slow compact />
+                  </div>
+                  {card.source === "ustad" && (
+                    <p className="mt-2 text-xs text-[#8a3412] inline-flex items-center gap-1">
+                      <Mic2 size={12} /> Ustad caught this {card.mistakes > 1 ? `${card.mistakes} times` : "once"}
+                    </p>
+                  )}
+                  {!revealed ? (
+                    <button
+                      type="button"
+                      onClick={() => setRevealed(true)}
+                      className="mt-6 px-6 py-2.5 rounded-full border border-[#e2c9ad] text-[#5a321c] hover:bg-[#f6e2cf]"
+                    >
+                      Show meaning
+                    </button>
+                  ) : (
+                    <>
+                      {card.roman && <p className="mt-4 italic text-[#7d5b44]">{card.roman}</p>}
+                      <p className="mt-2 text-lg text-[#3b2419]">{card.meaning || "—"}</p>
+                      {card.tip && <p className="mt-2 text-sm text-[#8a3412]">🗣 {card.tip}</p>}
+                      <p className="mt-6 text-xs text-[#94725a]">How well did you know it?</p>
+                      <div className="mt-2 grid grid-cols-4 gap-2">
+                        {GRADES.map((g) => (
+                          <button
+                            key={g.q}
+                            type="button"
+                            disabled={busy}
+                            onClick={() => grade(card.id, g.q)}
+                            className={`py-2 rounded-xl border text-sm font-medium disabled:opacity-50 ${g.cls}`}
+                          >
+                            {g.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <p className="text-[#3f7d3a] font-medium">All caught up for today. Shabaash! 🌙</p>
+              )}
+              <button
+                type="button"
+                onClick={() => setReviewMode(false)}
+                className="mt-5 text-sm text-[#94725a] hover:text-[#3b2419]"
+              >
+                Close review
+              </button>
+            </Card>
+          )}
+
           <ul className="space-y-3">
             {words.map((w) => (
-              <li
-                key={w.id}
-                className="p-4 rounded-xl border border-[#e2c9ad] flex flex-col gap-2 bg-[#fff7ef]"
-              >
-                <div className="text-xl font-medium text-[#3b2419]">{w.word}</div>
-                <div className="text-[#5a3a28] text-sm">
-                  {w.meaning && w.meaning !== "Loading…"
-                    ? w.meaning
-                    : "— Definition not loaded. Add again from Scan by tapping the word after the definition loads."}
+              <li key={w.id} className="p-4 rounded-2xl border border-[#ecd6bd] bg-[#fff8f0] flex items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-deva text-xl text-[#3b2419]">{w.word}</span>
+                    {w.roman && <span className="text-sm italic text-[#7d5b44]">{w.roman}</span>}
+                    {w.source === "ustad" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#fdeee4] text-[#8a3412]">from Ustad</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-[#5a3a28] mt-1">{w.meaning || "—"}</p>
+                  {w.tip && <p className="text-xs text-[#8a3412] mt-1">{w.tip}</p>}
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="h-1.5 w-32 rounded-full bg-[#f0dfcc] overflow-hidden" aria-label={`Strength ${w.strength}%`}>
+                      <div className="h-full bg-[#c26a3b]" style={{ width: `${w.strength}%` }} />
+                    </div>
+                    <span className={`text-xs ${w.isDue ? "text-[#8a3412] font-medium" : "text-[#94725a]"}`}>{dueLabel(w)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className="text-xs text-[#94725a]">Strength: {w.strength}</span>
-                  <span className="text-[#b08a6a]">·</span>
-                  <span className="text-xs text-[#94725a]">Last reviewed: {formatTimestamp(w.lastReviewed)}</span>
-                  <span className="text-[#b08a6a]">·</span>
-                  <span className="text-xs text-[#94725a]">Rate recall:</span>
-                  {[0, 1, 2, 3, 4, 5].map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      disabled={reviewingId === w.id}
-                      onClick={() => handleReview(w.id, q)}
-                      className="px-2 py-0.5 text-xs rounded bg-[#f6e2cf] border border-[#e2c9ad] text-[#3b2419] hover:bg-[#e2c9ad] disabled:opacity-50"
-                      title={q < 3 ? "Forgot / wrong" : "Knew it"}
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
+                <SpeakButton text={w.word} compact />
               </li>
             ))}
           </ul>
-        )}
-      </div>
-    </div>
+        </>
+      )}
+    </Page>
   );
 }

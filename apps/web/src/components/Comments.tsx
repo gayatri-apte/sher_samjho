@@ -11,13 +11,13 @@ import {
 } from "firebase/firestore";
 import {db, auth} from "../services/firebase";
 import {useAuth} from "../hooks/useAuth";
-import {getAuth} from "firebase/auth";
 
 type Comment = {
   id: string;
   text: string;
   userId?: string;
   userEmail?: string;
+  userName?: string;
   createdAt?: {seconds: number; nanoseconds: number} | Date | null;
 };
 
@@ -34,17 +34,8 @@ export default function Comments({sherId}: Props) {
   const [success, setSuccess] = useState(false);
   const {isAuthenticated} = useAuth();
 
-  // Debug: Check if user is logged in
   useEffect(() => {
-    const authInstance = getAuth();
-    console.log("Current user:", authInstance.currentUser);
-  }, []);
-
-  useEffect(() => {
-    if (!sherId) {
-      setComments([]);
-      return;
-    }
+    if (!sherId) return;
 
     async function fetchComments() {
       if (!sherId) return;
@@ -62,7 +53,7 @@ export default function Comments({sherId}: Props) {
               id: doc.id,
               text: data.text,
               userId: data.userId,
-              userEmail: data.userEmail || undefined,
+              userName: data.userName || undefined,
               createdAt: data.createdAt,
             };
           })
@@ -88,9 +79,9 @@ export default function Comments({sherId}: Props) {
         doc(db, "global_poetry_cache", sherId, "comments", commentId)
       );
       setComments((prev) => prev.filter((c) => c.id !== commentId));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message ?? "Failed to delete comment");
+      setError(err instanceof Error ? err.message : "Failed to delete comment");
       setTimeout(() => setError(null), 3000);
     }
   }
@@ -115,14 +106,16 @@ export default function Comments({sherId}: Props) {
       setSuccess(false);
 
       const currentUser = auth.currentUser;
-      console.log("Posting comment as user:", currentUser?.email);
 
       await addDoc(
         collection(db, "global_poetry_cache", sherId, "comments"),
         {
           text: text.trim(),
           userId: currentUser?.uid,
-          userEmail: currentUser?.email,
+          userName:
+            currentUser?.displayName ||
+            (currentUser?.isAnonymous ? "Guest" : currentUser?.email?.split("@")[0]) ||
+            "Reader",
           createdAt: serverTimestamp(),
         }
       );
@@ -144,14 +137,14 @@ export default function Comments({sherId}: Props) {
             id: doc.id,
             text: data.text,
             userId: data.userId,
-            userEmail: data.userEmail || undefined,
+            userName: data.userName || undefined,
             createdAt: data.createdAt,
           };
         })
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Failed to post comment. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to post comment. Please try again.");
       setTimeout(() => setError(null), 3000);
     } finally {
       setSubmitting(false);
@@ -167,7 +160,7 @@ export default function Comments({sherId}: Props) {
       <h2 className="text-xl mb-4">Comments</h2>
 
       {!isAuthenticated && (
-        <p className="mb-4 text-sm text-neutral-400">
+        <p className="mb-4 text-sm text-[#94725a]">
           Sign in to post a comment
         </p>
       )}
@@ -177,6 +170,7 @@ export default function Comments({sherId}: Props) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Write your thoughts…"
+        maxLength={1000}
         disabled={!isAuthenticated}
       />
 
@@ -184,15 +178,15 @@ export default function Comments({sherId}: Props) {
         <button
           onClick={addComment}
           disabled={submitting || !text.trim() || !isAuthenticated}
-          className="px-4 py-2 bg-white text-black rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-100 transition-colors"
+          className="px-5 py-2 rounded-full bg-[#c26a3b] text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#a9552a] transition-colors"
         >
           {submitting ? "Posting…" : success ? "✓ Posted!" : "Post"}
         </button>
         {error && (
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-[#8a2a1a]">{error}</p>
         )}
         {success && !error && (
-          <p className="text-sm text-green-400">Comment posted successfully!</p>
+          <p className="text-sm text-[#3f7d3a]">Comment posted successfully!</p>
         )}
       </div>
 
@@ -210,11 +204,9 @@ export default function Comments({sherId}: Props) {
               className="bg-[#fff7ef] border border-[#e2c9ad] p-4 rounded-xl"
             >
               <p className="text-[#3b2419]">{c.text}</p>
-              {c.userEmail && (
-                <p className="text-sm text-[#94725a] mt-2">
-                  {c.userEmail}
-                </p>
-              )}
+              <p className="text-sm text-[#94725a] mt-2">
+                — {c.userName || "Reader"}
+              </p>
               {isAuthor && (
                 <button
                   type="button"

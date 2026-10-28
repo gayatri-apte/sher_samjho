@@ -3,7 +3,7 @@ import { auth } from "../../services/firebase";
 import { sendImageForOCR } from "./ocr.service";
 import type { OCRResult } from "./ocr.service";
 
-const GUEST_SCAN_LIMIT = 5;
+const GUEST_SCAN_LIMIT = Number(import.meta.env.VITE_MAX_GUEST_SCANS) || 5;
 const GUEST_SCANS_KEY = "guest_scans";
 
 export function useOCR() {
@@ -21,12 +21,16 @@ export function useOCR() {
       if (isGuest) {
         const scans = Number(localStorage.getItem(GUEST_SCANS_KEY) || 0);
         if (scans >= GUEST_SCAN_LIMIT) {
-          throw new Error("Login required after 5 scans");
+          throw new Error(`Guests get ${GUEST_SCAN_LIMIT} free scans — please create an account to keep going.`);
         }
-        localStorage.setItem(GUEST_SCANS_KEY, String(scans + 1));
       }
 
       const data = await sendImageForOCR(file);
+      // Only count successful scans against the guest limit.
+      if (isGuest) {
+        const scans = Number(localStorage.getItem(GUEST_SCANS_KEY) || 0);
+        localStorage.setItem(GUEST_SCANS_KEY, String(scans + 1));
+      }
       setResult(data);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "OCR failed";
@@ -36,7 +40,13 @@ export function useOCR() {
     }
   }
 
+  function reset() {
+    setResult(null);
+    setError(null);
+  }
+
   return {
+    reset,
     result,
     text: result?.devanagariText ?? null,
     devanagariText: result?.devanagariText ?? null,

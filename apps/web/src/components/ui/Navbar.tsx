@@ -1,153 +1,107 @@
-import {useState, useRef, useEffect} from "react";
-import {Link, useLocation, useNavigate} from "react-router-dom";
-import {useAuth} from "../../hooks/useAuth";
-import {logout} from "../../services/auth.service";
+import { useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { BookOpen, Menu, X } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import { logout } from "../../services/auth.service";
+
+const LINKS: { to: string; label: string }[] = [
+  { to: "/ustad", label: "Ustad" },
+  { to: "/scan", label: "Scan" },
+  { to: "/find", label: "Ek sher tha…" },
+  { to: "/baitbazi", label: "Bait-bazi" },
+  { to: "/feed", label: "Aaj ka sher" },
+  { to: "/search", label: "Search" },
+  { to: "/vocabulary", label: "Deck" },
+];
+
+const MORE: { to: string; label: string }[] = [
+  { to: "/discover", label: "Discover by mood" },
+  { to: "/explorer", label: "Eras" },
+  { to: "/explorer/poets", label: "Poets" },
+  { to: "/history", label: "History" },
+  { to: "/dashboard", label: "My progress" },
+  { to: "/leaderboard", label: "Leaderboard" },
+];
 
 export default function Navbar() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const {isAuthenticated} = useAuth();
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated, user } = useAuth();
+  const [open, setOpen] = useState(false);
 
-  const linkClass = (path: string) =>
-    location.pathname === path
-      ? "text-[#c26a3b]"
-      : "hover:text-[#c26a3b]";
-
-  const unauthenticatedLinkClass = "hover:text-[#c26a3b] cursor-pointer";
-
-  async function handleLogout() {
-    await logout();
-    navigate("/login");
-  }
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const mainNavItems: {path: string; label: string}[] = [
-    {path: "/", label: "Home"},
-    {path: "/search", label: "Search"},
-    {path: "/discover", label: "Discover"},
-    {path: "/poetry-ai", label: "Poetry AI"},
-    {path: "/scan", label: "Scan"},
-    {path: "/admin", label: "Admin"},
-  ];
-
-  const moreNavItems: {path: string; label: string}[] = [
-    {path: "/reader", label: "Reader"},
-    {path: "/feed", label: "Daily Feed"},
-    {path: "/history", label: "History"},
-    {path: "/vocabulary", label: "Vocabulary"},
-  ];
+  const cls = ({ isActive }: { isActive: boolean }) =>
+    `px-3 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
+      isActive ? "bg-[#f3dcc4] text-[#8b4513] font-medium" : "text-[#5b4636] hover:bg-[#f6e7d8]"
+    }`;
 
   return (
-    <nav className="h-16 flex items-center gap-6 px-4 sm:px-6 border-b border-[#e2c9ad] bg-[#fdf4ea]/80 backdrop-blur-sm min-w-0 shrink-0">
-      {mainNavItems.map(({path, label}) =>
-        isAuthenticated ? (
-          <Link key={path} to={path} className={linkClass(path)}>
-            {label}
-          </Link>
-        ) : path === "/" ? (
-          <Link key={path} to={path} className={linkClass(path)}>
-            {label}
-          </Link>
-        ) : (
-          <Link key={path} to="/login" className={unauthenticatedLinkClass}>
-            {label}
-          </Link>
-        )
-      )}
+    <header className="sticky top-0 z-40 h-16 border-b border-[#ecd6bd] bg-[#fdf4ea]/90 backdrop-blur">
+      <div className="max-w-7xl mx-auto h-full px-4 flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-2 shrink-0 mr-2" aria-label="Sher Samjho home">
+          <span className="bg-[#c26a3b] p-1.5 rounded-lg text-white"><BookOpen size={18} /></span>
+          <span className="font-semibold text-[#5a2e14]">Sher Samjho</span>
+        </Link>
 
-      <div className="relative" ref={moreRef}>
-        {isAuthenticated ? (
-          <>
+        <nav className="hidden lg:flex items-center gap-1 min-w-0" aria-label="Main">
+          {LINKS.map((l) => (
+            <NavLink key={l.to} to={l.to} className={cls}>
+              {l.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-2">
+          {isAuthenticated ? (
             <button
               type="button"
-              onClick={() => setMoreOpen((o) => !o)}
-              className={
-                moreNavItems.some(({path}) => location.pathname === path)
-                  ? "text-[#c26a3b]"
-                  : "hover:text-[#c26a3b]"
-              }
-              aria-expanded={moreOpen}
-              aria-haspopup="true"
+              onClick={async () => {
+                await logout();
+                navigate("/");
+              }}
+              className="hidden sm:inline px-3 py-2 text-sm text-[#7d5b44] hover:text-[#8a2a1a]"
+              title={user?.email ?? "Guest"}
             >
-              More
+              Log out
             </button>
-            {moreOpen && (
-              <div
-                className="absolute left-0 top-full mt-1 py-2 w-40 rounded-lg border border-[#e2c9ad] bg-[#fff7ef] shadow-xl z-50"
-                role="menu"
-              >
-                {moreNavItems.map(({path, label}) => (
-                  <Link
-                    key={path}
-                    to={path}
-                    role="menuitem"
-                    className={`block px-4 py-2 text-sm ${linkClass(path)}`}
-                    onClick={() => setMoreOpen(false)}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setMoreOpen((o) => !o)}
-              className={unauthenticatedLinkClass}
-              aria-expanded={moreOpen}
-              aria-haspopup="true"
-            >
-              More
-            </button>
-            {moreOpen && (
-              <div
-                className="absolute left-0 top-full mt-1 py-2 w-40 rounded-lg border border-[#e2c9ad] bg-[#fff7ef] shadow-xl z-50"
-                role="menu"
-              >
-                {moreNavItems.map(({path, label}) => (
-                  <Link
-                    key={path}
-                    to="/login"
-                    role="menuitem"
-                    className="block px-4 py-2 text-sm hover:text-[#c26a3b]"
-                    onClick={() => setMoreOpen(false)}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      <div className="ml-auto">
-        {!isAuthenticated ? (
-          <Link to="/login" className={linkClass("/login")}>
-            Login
-          </Link>
-        ) : (
+          ) : (
+            <Link to="/login" className="px-4 py-2 rounded-full bg-[#c26a3b] text-white text-sm font-medium hover:bg-[#a9552a]">
+              Log in
+            </Link>
+          )}
           <button
-            onClick={handleLogout}
-            className="hover:text-red-400 transition"
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="p-2 rounded-full hover:bg-[#f6e7d8] text-[#5a2e14]"
+            aria-label="Menu"
+            aria-expanded={open}
           >
-            Logout
+            {open ? <X size={20} /> : <Menu size={20} />}
           </button>
-        )}
+        </div>
       </div>
-    </nav>
+
+      {open && (
+        <div className="absolute inset-x-0 top-16 border-b border-[#ecd6bd] bg-[#fff8f0] shadow-lg">
+          <nav className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-2 sm:grid-cols-3 gap-1" aria-label="All pages">
+            {[...LINKS, ...MORE].map((l) => (
+              <NavLink key={l.to} to={l.to} className={cls} end onClick={() => setOpen(false)}>
+                {l.label}
+              </NavLink>
+            ))}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  navigate("/");
+                }}
+                className="sm:hidden text-left px-3 py-2 text-sm text-[#8a2a1a]"
+              >
+                Log out
+              </button>
+            )}
+          </nav>
+        </div>
+      )}
+    </header>
   );
 }

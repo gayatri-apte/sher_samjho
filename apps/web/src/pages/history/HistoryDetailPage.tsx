@@ -23,15 +23,11 @@ export default function HistoryDetailPage() {
   const { id: scanId } = useParams();
   const navigate = useNavigate();
   const [scan, setScan] = useState<Scan | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(Boolean(scanId));
+  const [error, setError] = useState<string | null>(scanId ? null : "No scan id provided");
 
   useEffect(() => {
-    if (!scanId) {
-      setError("No scan id provided");
-      setLoading(false);
-      return;
-    }
+    if (!scanId) return;
 
     fetchScanById(scanId)
       .then((data) => setScan(data as Scan))

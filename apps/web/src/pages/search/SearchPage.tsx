@@ -87,6 +87,7 @@ export default function SearchPage() {
   }, []);
 
   async function search() {
+    if (!query.trim()) return;
     setLoading(true);
     setError(null);
     try {
@@ -104,7 +105,10 @@ export default function SearchPage() {
         }).then((r) => r.json()),
       ]);
 
-      const merged = [...keywordRes, ...semanticRes];
+      const merged = [
+        ...(Array.isArray(keywordRes) ? keywordRes : []),
+        ...(Array.isArray(semanticRes) ? semanticRes : []),
+      ];
 
       const unique = Array.from(
         new Map(
@@ -147,7 +151,16 @@ export default function SearchPage() {
         <span>Back to Home</span>
       </button>
 
+      <p className="mb-3 text-sm text-[#7d5b44]">
+        Remember a line but not the words?{" "}
+        <button type="button" onClick={() => navigate("/find")} className="text-[#c26a3b] font-medium hover:underline">
+          Say it out loud instead →
+        </button>
+      </p>
       <input
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && query.trim()) void search();
+        }}
         className="w-full p-3 bg-[#f6e2cf] text-[#3b2419] rounded border border-[#e2c9ad] placeholder:text-[#c39a79] text-sm"
         placeholder="Search by meaning…"
         value={query}

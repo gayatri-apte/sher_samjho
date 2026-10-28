@@ -2,47 +2,75 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🔹 Global poetry
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // Shared poetry corpus: readable by all, written ONLY by Cloud Functions
+    // (Admin SDK bypasses rules). Before, any signed-in user — including
+    // anonymous guests — could overwrite or delete every sher.
     match /global_poetry_cache/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
 
-      // 🔹 Comments subcollection
+      // Comments: anyone reads; signed-in users create their own;
+      // only the author can edit/delete (before: anyone could).
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if request.auth != null;
-        allow delete: if request.auth != null;
-        allow update: if request.auth != null;
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000;
+        allow update: if signedIn()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.text.size() <= 1000;
+        allow delete: if signedIn() && resource.data.userId == request.auth.uid;
       }
     }
 
-    // 🔹 Poets
+    // Poet profiles are curated content (server-written only).
     match /poets/{poetId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
 
-    // 🔹 Users
+    match /official_recitations/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /recitations/{id} {
+      allow read: if isOwner(resource.data.uid);
+      allow write: if false;
+    }
+
+    // Users: own data only. Stats/streak fields are server-maintained, so
+    // the client may not edit the user document itself.
     match /users/{userId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow write: if false;
 
       match /following/{poetId} {
-        allow read, write: if request.auth != null
-                           && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
-
-      // User's scan history
       match /scans/{scanId} {
-        allow read, write: if request.auth != null
-                           && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow write: if false;
       }
-
-      // User's vocabulary
       match /vocabulary/{wordId} {
-        allow read, write: if request.auth != null
-                           && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow write: if false;
       }
+      match /recitationAttempts/{id} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+    }
+
+    // Analytics are admin/server only.
+    match /analytics/{doc} {
+      allow read, write: if false;
     }
   }
 }

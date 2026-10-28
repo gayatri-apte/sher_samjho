@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Camera, X } from "lucide-react";
 
 type Props = {
   onCapture: (file: File) => void;
@@ -6,92 +7,88 @@ type Props = {
 
 export default function CameraCapture({ onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [active, setActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setActive(false);
+  }
+
+  // Always release the camera when leaving the page (it used to stay on).
+  useEffect(() => stopCamera, []);
+
   async function startCamera() {
+    setError(null);
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1920 } },
       });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-
-      setStream(mediaStream);
+      streamRef.current = s;
+      setActive(true);
+      requestAnimationFrame(() => {
+        if (videoRef.current) videoRef.current.srcObject = s;
+      });
     } catch {
-      setError("Camera access denied or unavailable");
+      setError("Camera access denied or unavailable — use Upload instead.");
     }
   }
 
   function capturePhoto() {
-    if (!videoRef.current || !canvasRef.current) return;
-
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
-      onCapture(file);
-    }, "image/jpeg");
-  }
-
-  function stopCamera() {
-    stream?.getTracks().forEach((t) => t.stop());
-    setStream(null);
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        stopCamera();
+        onCapture(new File([blob], "scan.jpg", { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.92,
+    );
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      {error && <p className="text-red-400">{error}</p>}
+    <div className="flex flex-col items-center gap-4 w-full">
+      {error && <p className="text-sm text-[#8a2a1a]">{error}</p>}
 
-      {!stream && (
+      {!active ? (
         <button
+          type="button"
           onClick={startCamera}
-          className="px-5 py-2.5 rounded-xl bg-[#c26a3b] hover:bg-[#a9552a] text-white text-sm font-semibold shadow-md shadow-[#c26a3b]/30"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#c26a3b] hover:bg-[#a9552a] text-white font-semibold shadow-md shadow-[#c26a3b]/30"
         >
-          Open Camera
+          <Camera size={18} /> Open camera
         </button>
+      ) : (
+        <>
+          <div className="w-full max-w-md rounded-2xl overflow-hidden border border-[#ecd6bd] bg-black">
+            <video ref={videoRef} autoPlay playsInline muted className="w-full" />
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={capturePhoto}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#c26a3b] text-white font-medium"
+            >
+              <Camera size={16} /> Capture
+            </button>
+            <button
+              type="button"
+              onClick={stopCamera}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-[#e2c9ad] text-[#5a321c]"
+            >
+              <X size={16} /> Cancel
+            </button>
+          </div>
+        </>
       )}
-    <div className="w-full max-w-md rounded-xl overflow-hidden border border-neutral-700">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        className="rounded-xl max-w-full"
-      />
-      </div>
-
-      {stream && (
-        <div className="flex gap-4">
-          <button
-            onClick={capturePhoto}
-            className="px-4 py-2 rounded bg-green-600 hover:bg-green-700"
-          >
-            Capture
-          </button>
-
-          <button
-            onClick={stopCamera}
-            className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600"
-          >
-            Stop
-          </button>
-        </div>
-      )}
-
-      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }

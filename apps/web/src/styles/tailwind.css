@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Script-specific fonts */
+.font-deva {
+  font-family: "Noto Serif Devanagari", "Noto Sans Devanagari", serif;
+}
+.font-urdu {
+  font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

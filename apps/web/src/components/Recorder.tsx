@@ -67,7 +67,7 @@ export default function Recorder({sherId}: {sherId: string}) {
 
       recorder.start();
       setRecording(true);
-    } catch (err) {
+    } catch {
       setError("Could not access microphone. Check permissions.");
       setRecording(false);
     }

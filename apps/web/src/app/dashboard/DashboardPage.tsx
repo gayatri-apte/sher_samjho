@@ -9,7 +9,8 @@ type UserStats = {
   longestStreak?: number;
   totalReviews?: number;
   totalScans?: number;
-  masteryScore?: number;
+  totalRecitations?: number;
+  bestRecitationScore?: number;
 };
 
 export default function DashboardPage() {
@@ -122,8 +123,13 @@ export default function DashboardPage() {
         </div>
 
         <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
-          <p className="text-sm text-[#94725a] mb-1">Mastery Score</p>
-          <h2 className="text-2xl">{stats.masteryScore || 0}</h2>
+          <p className="text-sm text-[#94725a] mb-1">Recitations with Ustad</p>
+          <h2 className="text-2xl">{stats.totalRecitations || 0}</h2>
+        </div>
+
+        <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
+          <p className="text-sm text-[#94725a] mb-1">Best recitation score</p>
+          <h2 className="text-2xl">{stats.bestRecitationScore || 0}<span className="text-sm text-[#94725a]">/100</span></h2>
         </div>
       </div>
     </div>

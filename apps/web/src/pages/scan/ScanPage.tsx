@@ -1,305 +1,296 @@
-import {useState, useEffect} from "react";
-import {useNavigate} from "react-router-dom";
-import {onAuthStateChanged} from "firebase/auth";
-import type {User} from "firebase/auth";
-import {auth} from "../../services/firebase";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Mic2, Sparkles, Save, RotateCcw, ScanLine } from "lucide-react";
 import CameraCapture from "../../components/camera/CameraCapture";
 import ImageUpload from "../../components/camera/ImageUpload";
-import {useOCR} from "../../features/ocr/useOCR";
-import type {TashreehLevels} from "../../features/ocr/ocr.service";
-import {saveHistory, lookupDictionary, saveVocabulary} from "../../services/functions.service";
+import { useOCR } from "../../features/ocr/useOCR";
+import type { TashreehLevels } from "../../features/ocr/ocr.service";
+import { saveHistory, lookupDictionary, saveVocabulary } from "../../services/functions.service";
 import PoetryText from "../../components/PoetryText";
 import WordModal from "../../components/WordModal";
+import SpeakButton from "../../components/voice/SpeakButton";
+import Page, { Card, ErrorNote } from "../../components/ui/Page";
+import { useAuth } from "../../hooks/useAuth";
 
-type ScriptView = "dev" | "roman" | "both";
-type TashreehLevelKey = "beginner" | "intermediate" | "scholar";
+type ScriptView = "dev" | "urdu" | "roman" | "all";
+type Level = "beginner" | "intermediate" | "scholar";
+
+const POETS = ["Mirza Ghalib", "Mir Taqi Mir", "Faiz Ahmed Faiz", "Allama Iqbal", "Jaun Elia", "Ahmad Faraz"];
 
 export default function ScanPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [image, setImage] = useState<File | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [script, setScript] = useState<ScriptView>("dev");
-  const [tashreehLevel, setTashreehLevel] = useState<TashreehLevelKey>("beginner");
+  const [script, setScript] = useState<ScriptView>("all");
+  const [level, setLevel] = useState<Level>("beginner");
   const [poet, setPoet] = useState("");
-  const {
-    result,
-    devanagariText,
-    romanText,
-    tashreeh,
-    textHash,
-    loading,
-    error,
-    analyze,
-  } = useOCR();
+  const { result, devanagariText, romanText, textHash, loading, error, analyze, reset } = useOCR();
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [popupWord, setPopupWord] = useState<string | null>(null);
-  const [popupMeaning, setPopupMeaning] = useState<string>("");
-  const [vocabularySaving, setVocabularySaving] = useState(false);
+  const [popupMeaning, setPopupMeaning] = useState("");
+  const [meaningLoading, setMeaningLoading] = useState(false);
+  const [vocabSaving, setVocabSaving] = useState(false);
+  const [vocabMsg, setVocabMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsub();
-  }, []);
+  // Object URL created once per image (was re-created on every render → leak)
+  const preview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
 
-  useEffect(() => {
-    if (result) {
-      setSaved(false);
-      setSaveError(null);
-    }
-  }, [result]);
-
+  const rawUrdu = result?.rawUrdu ?? "";
+  const isUrdu = result?.script === "urdu" && /[؀-ۿ]/.test(rawUrdu);
   const hasText = Boolean(devanagariText || romanText);
 
-  const tashreehLevels: TashreehLevels | null =
+  const levels: TashreehLevels | null =
     result?.tashreeh == null
       ? null
       : typeof result.tashreeh === "object"
         ? result.tashreeh
-        : {
-            beginner: result.tashreeh,
-            intermediate: result.tashreeh,
-            scholar: result.tashreeh,
-          };
-  const tashreehText =
-    tashreehLevels?.[tashreehLevel] ?? tashreehLevels?.beginner ?? "";
+        : { beginner: result.tashreeh, intermediate: result.tashreeh, scholar: result.tashreeh };
+  const tashreehText = levels?.[level] ?? levels?.beginner ?? "";
 
   async function handleWordClick(word: string) {
-    const w = word.trim();
+    const w = word.replace(/[।,.!?؟،۔"'“”]/g, "").trim();
     if (!w) return;
     setPopupWord(w);
-    setPopupMeaning("Loading…");
+    setVocabMsg(null);
+    setPopupMeaning("");
+    setMeaningLoading(true);
     try {
-      const {meaning} = await lookupDictionary(w);
+      const { meaning } = await lookupDictionary(w);
       setPopupMeaning(meaning);
     } catch (err) {
-      console.error("Dictionary lookup failed:", err);
       setPopupMeaning(err instanceof Error ? err.message : "Lookup failed");
+    } finally {
+      setMeaningLoading(false);
     }
   }
 
-  function closeWordModal() {
-    setPopupWord(null);
-    setPopupMeaning("");
+  async function handleSave() {
+    if (!user || !textHash) return;
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await saveHistory({
+        cacheHash: textHash,
+        text: devanagariText ?? rawUrdu,
+        explanation: tashreehText,
+        devanagariText: devanagariText ?? undefined,
+        tashreeh: tashreehText || undefined,
+        poet: poet || undefined,
+        ocrConfidence: result?.confidence ?? 0.7,
+        attributionConfidence: poet ? 1 : 0,
+      });
+      setSaved(true);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Could not save to history.");
+    } finally {
+      setSaving(false);
+    }
   }
 
+  function startOver() {
+    setImage(null);
+    reset();
+  }
+
+  const nav = { text: devanagariText ?? "", poet, cacheHash: textHash ?? "", explanation: tashreehText };
+
   return (
-    <div
-      className="min-h-screen w-full overflow-x-hidden overflow-y-auto bg-cover bg-no-repeat bg-top"
-      style={{backgroundImage: "url('/images/background-lanterns.png')"}}
+    <Page
+      title="Tasveer — scan a sher"
+      subtitle="Point your camera at printed Urdu or Hindi poetry. We read it, transliterate it, explain it — and read it aloud for you."
+      bg="lanterns"
     >
-      <div className="flex flex-col items-center gap-6 px-4 pt-20 pb-8 w-full max-w-4xl mx-auto min-w-0">
-        <div className="w-full flex justify-start">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="mb-2 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-          >
-            <span className="text-lg">←</span>
-            <span>Back to Home</span>
-          </button>
-        </div>
-        <h2 className="text-3xl font-semibold shrink-0">Scan Poetry</h2>
-        <p className="text-sm text-neutral-400 -mt-2 shrink-0">
-          Urdu or Hindi — we detect and explain both
-        </p>
+      {!image && (
+        <Card className="flex flex-col items-center gap-5">
+          <ScanLine size={40} className="text-[#c26a3b]" />
+          <CameraCapture onCapture={setImage} />
+          <ImageUpload onSelect={setImage} />
+        </Card>
+      )}
 
-        {!image && (
-          <>
-            <CameraCapture onCapture={setImage} />
-            <ImageUpload onSelect={setImage} />
-          </>
-        )}
-
-        {image && (
-          <>
+      {image && preview && (
+        <div className="space-y-6">
+          <Card className="flex flex-col items-center gap-4">
             <img
-              src={URL.createObjectURL(image)}
-              alt="preview"
-              className="w-full max-w-md max-h-[40vh] object-contain rounded-xl border border-neutral-700 shrink-0"
+              src={preview}
+              alt="Your photo of the sher"
+              className="w-full max-w-md max-h-[40vh] object-contain rounded-2xl border border-[#ecd6bd]"
             />
-
-            <button
-              onClick={() => analyze(image)}
-              disabled={loading}
-              className="px-6 py-3 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Analyzing..." : "Analyze"}
-            </button>
-
-            {error && (
-              <div className="mt-4 w-full max-w-xl p-4 bg-red-900/50 border border-red-700 rounded text-red-200 shrink-0">
-                Error: {error}
-              </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              {!result && (
+                <button
+                  onClick={() => {
+                    setSaved(false);
+                    setSaveError(null);
+                    void analyze(image);
+                  }}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#c26a3b] hover:bg-[#a9552a] text-white font-medium disabled:opacity-50"
+                >
+                  <Sparkles size={18} />
+                  {loading ? "Reading the sher…" : "Read & explain"}
+                </button>
+              )}
+              <button
+                onClick={startOver}
+                className="inline-flex items-center gap-2 px-4 py-3 rounded-full border border-[#e2c9ad] text-sm text-[#5a321c] hover:bg-[#f6e2cf]"
+              >
+                <RotateCcw size={16} /> Retake
+              </button>
+            </div>
+            {loading && (
+              <p className="text-xs text-[#94725a]">First scans take ~15–30 s (OCR → transliteration → 3 levels of tashreeh).</p>
             )}
+            {error && <ErrorNote>{error}</ErrorNote>}
+          </Card>
 
-            {hasText && (
-              <>
-                <div className="mt-4 flex flex-wrap items-center gap-3 w-full max-w-4xl shrink-0">
-                  {result?.script && (
-                    <span className="text-xs px-2 py-1 rounded bg-neutral-700 text-neutral-300">
-                      {result.script === "devanagari" ? "Hindi" : "Urdu"} poetry
-                    </span>
-                  )}
-                  <span className="text-sm text-neutral-400">Display:</span>
+          {hasText && (
+            <Card>
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                {result?.script && (
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-[#f6e2cf] text-[#5a321c]">
+                    {result.script === "devanagari" ? "Hindi" : "Urdu"} poetry detected
+                  </span>
+                )}
+                <div className="ml-auto flex items-center gap-2">
+                  <label htmlFor="script" className="text-sm text-[#94725a]">Show</label>
                   <select
+                    id="script"
                     value={script}
                     onChange={(e) => setScript(e.target.value as ScriptView)}
-                    className="rounded border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
+                    className="rounded-lg border border-[#e2c9ad] bg-[#fffaf4] px-3 py-1.5 text-sm"
                   >
+                    <option value="all">All scripts</option>
                     <option value="dev">Devanagari</option>
+                    {isUrdu && <option value="urdu">Urdu</option>}
                     <option value="roman">Roman</option>
-                    <option value="both">Both</option>
                   </select>
                 </div>
+              </div>
 
-                {script !== "roman" && devanagariText && (
-                  <div
-                    className="mt-6 w-full min-w-0 max-w-4xl rounded-xl border border-neutral-700/50 bg-neutral-800/40 p-6 text-neutral-100 text-right tracking-normal whitespace-pre-wrap break-words overflow-hidden"
-                    style={{ fontFamily: "Noto Sans Devanagari, sans-serif" }}
-                  >
-                    <PoetryText text={devanagariText} onWordClick={handleWordClick} />
-                  </div>
-                )}
-                {script !== "dev" && romanText && (
-                  <div className="mt-6 w-full min-w-0 max-w-4xl rounded-xl border border-neutral-700/50 bg-neutral-800/40 p-6 text-neutral-100 text-right tracking-normal whitespace-pre-wrap break-words overflow-hidden">
-                    <PoetryText text={romanText} onWordClick={handleWordClick} />
-                  </div>
-                )}
-
-                <div className="mt-4 flex items-center gap-3 w-full max-w-4xl shrink-0">
-                  <span className="text-sm text-neutral-400">Poet:</span>
-                  <select
-                    value={poet}
-                    onChange={(e) => setPoet(e.target.value)}
-                    className="rounded border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
-                  >
-                    <option value="">Unknown Poet</option>
-                    <option value="Mirza Ghalib">Mirza Ghalib</option>
-                    <option value="Mir Taqi Mir">Mir Taqi Mir</option>
-                    <option value="Faiz Ahmed Faiz">Faiz Ahmed Faiz</option>
-                  </select>
+              {isUrdu && (script === "all" || script === "urdu") && (
+                <p dir="rtl" lang="ur" className="font-urdu text-2xl sm:text-3xl leading-[2.4] text-center whitespace-pre-line mb-4">
+                  {rawUrdu}
+                </p>
+              )}
+              {(script === "all" || script === "dev") && devanagariText && (
+                <div lang="hi" className="font-deva text-center">
+                  <PoetryText text={devanagariText} onWordClick={handleWordClick} />
                 </div>
+              )}
+              {(script === "all" || script === "roman") && romanText && (
+                <div className="mt-3 text-center italic text-[#7d5b44]">
+                  <PoetryText text={romanText} onWordClick={handleWordClick} small />
+                </div>
+              )}
+              <p className="mt-3 text-center text-xs text-[#b08a6a]">Tap any word for its meaning</p>
 
+              {/* Point-and-speak */}
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <SpeakButton text={isUrdu ? rawUrdu : devanagariText ?? ""} label="Read it aloud" />
+                <SpeakButton text={isUrdu ? rawUrdu : devanagariText ?? ""} slow label="Slowly" />
                 <button
-                  onClick={async () => {
-                    if (!user) return;
-                    setSaveError(null);
-                    setSaved(false);
-                    setSaving(true);
-                    try {
-                      await saveHistory({
-                        cacheHash: textHash ?? "",
-                        text: devanagariText ?? result?.rawUrdu ?? "",
-                        explanation: tashreehText || (typeof tashreeh === "string" ? tashreeh : ""),
-                        devanagariText: devanagariText ?? undefined,
-                        tashreeh: tashreehText || (typeof tashreeh === "string" ? tashreeh : undefined),
-                        poet: poet || undefined,
-                        ocrConfidence: result?.confidence ?? 0.7,
-                        attributionConfidence: poet && poet.trim() !== "" ? 1 : 0,
-                      });
-                      setSaved(true);
-                    } catch (err: unknown) {
-                      console.error("Save failed:", err);
-                      setSaveError(
-                        err instanceof Error
-                          ? err.message
-                          : "Could not save to history. Please try again.",
-                      );
-                    } finally {
-                      setSaving(false);
-                    }
-                  }}
-                  disabled={saving}
-                  className="px-6 py-3 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
+                  onClick={() => navigate(`/ustad/${encodeURIComponent(textHash ?? "")}`, { state: nav })}
+                  disabled={!textHash}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#c26a3b] text-white text-sm font-medium hover:bg-[#a9552a] disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : "Save to history"}
+                  <Mic2 size={16} /> Practice reciting
                 </button>
-                {tashreehLevels && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-sm text-neutral-400">Explanation:</span>
-                    <select
-                      value={tashreehLevel}
-                      onChange={(e) =>
-                        setTashreehLevel(e.target.value as TashreehLevelKey)
-                      }
-                      className="rounded border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
-                    >
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="scholar">Scholar</option>
-                    </select>
-                  </div>
-                )}
-                {!user && hasText && (
-                  <p className="text-sm text-amber-500">
-                    Log in to save to history
-                  </p>
-                )}
-                {saving && (
-                  <p className="text-sm text-neutral-400">Saving to history…</p>
-                )}
-                {saved && !saving && (
-                  <p className="text-sm text-green-400">Saved to history</p>
-                )}
-                {saveError && (
-                  <div className="mt-2 p-3 rounded bg-amber-900/40 border border-amber-700 text-amber-200 text-sm">
-                    {saveError}
-                  </div>
-                )}
-              </>
-            )}
-
-            {tashreehText && (
-              <>
-                <div
-                  className="mt-6 w-full min-w-0 max-w-4xl rounded-xl border border-neutral-700/50 bg-neutral-800/40 p-6 text-lg leading-relaxed text-neutral-100 tracking-normal whitespace-pre-wrap break-words overflow-hidden"
-                  style={{ fontFamily: "Noto Sans Devanagari, sans-serif" }}
+                <button
+                  type="button"
+                  onClick={() => navigate(`/poetry-ai/${encodeURIComponent(textHash ?? "")}`, { state: nav })}
+                  disabled={!textHash}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#e2c9ad] text-sm text-[#5a321c] hover:bg-[#f6e2cf] disabled:opacity-50"
                 >
-                  {tashreehText}
-                </div>
-                <div className="text-xs text-neutral-400 mt-2">
-                  AI Interpretation • Confidence{" "}
-                  {result?.confidence != null
-                    ? Math.round(result.confidence * 100)
-                    : 85}
-                  %
-                </div>
-              </>
-            )}
+                  <Sparkles size={16} /> Ask the AI
+                </button>
+              </div>
+            </Card>
+          )}
 
-            <button
-              onClick={() => setImage(null)}
-              className="text-sm text-neutral-400 hover:text-neutral-200 shrink-0"
-            >
-              Retake
-            </button>
+          {tashreehText && (
+            <Card>
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <h2 className="font-semibold text-[#5a2e14]">Tashreeh</h2>
+                <div className="inline-flex rounded-full border border-[#e2c9ad] p-0.5 bg-[#fffaf4]" role="tablist">
+                  {(["beginner", "intermediate", "scholar"] as Level[]).map((l) => (
+                    <button
+                      key={l}
+                      role="tab"
+                      aria-selected={level === l}
+                      onClick={() => setLevel(l)}
+                      className={`px-3 py-1 rounded-full text-xs capitalize ${level === l ? "bg-[#c26a3b] text-white" : "text-[#5a321c]"}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <span className="ml-auto"><SpeakButton text={tashreehText} compact /></span>
+              </div>
+              <p lang="hi" className="font-deva text-lg leading-relaxed text-[#3b2419] whitespace-pre-wrap">
+                {tashreehText}
+              </p>
+              <p className="mt-3 text-xs text-[#b08a6a]">
+                AI interpretation · confidence {Math.round((result?.confidence ?? 0.85) * 100)}% · other readings exist
+              </p>
 
-            {popupWord != null && (
-              <WordModal
-                word={popupWord}
-                meaning={popupMeaning}
-                saving={vocabularySaving}
-                meaningLoading={popupMeaning === "Loading…"}
-                onSave={async () => {
-                  if (!popupWord) return;
-                  setVocabularySaving(true);
-                  try {
-                    await saveVocabulary(popupWord, popupMeaning);
-                    closeWordModal();
-                  } catch (err) {
-                    console.error("Save to vocabulary failed:", err);
-                  } finally {
-                    setVocabularySaving(false);
-                  }
-                }}
-                onClose={closeWordModal}
-              />
-            )}
-          </>
-        )}
-      </div>
-    </div>
+              <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[#f0d9c2] pt-5">
+                <label htmlFor="poet" className="text-sm text-[#94725a]">Poet</label>
+                <select
+                  id="poet"
+                  value={poet}
+                  onChange={(e) => setPoet(e.target.value)}
+                  className="rounded-lg border border-[#e2c9ad] bg-[#fffaf4] px-3 py-1.5 text-sm"
+                >
+                  <option value="">Unknown poet</option>
+                  {POETS.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || saved || !user}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#3b2419] text-white text-sm disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  {saving ? "Saving…" : saved ? "Saved to history" : "Save to history"}
+                </button>
+                {!user && <span className="text-sm text-[#8a3412]">Log in to save</span>}
+              </div>
+              {saveError && <ErrorNote>{saveError}</ErrorNote>}
+            </Card>
+          )}
+        </div>
+      )}
+
+      {popupWord != null && (
+        <WordModal
+          word={popupWord}
+          meaning={popupMeaning}
+          meaningLoading={meaningLoading}
+          saving={vocabSaving}
+          status={vocabMsg}
+          onSave={async () => {
+            setVocabSaving(true);
+            try {
+              await saveVocabulary(popupWord, popupMeaning);
+              setVocabMsg("Saved to your deck ✓");
+              setTimeout(() => setPopupWord(null), 700);
+            } catch (err) {
+              setVocabMsg(err instanceof Error ? err.message : "Could not save");
+            } finally {
+              setVocabSaving(false);
+            }
+          }}
+          onClose={() => setPopupWord(null)}
+        />
+      )}
+    </Page>
   );
 }

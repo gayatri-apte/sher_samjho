@@ -1,26 +1,34 @@
-import {Request, Response} from "express";
+import type {Request, Response} from "express";
 import {generateSpeech} from "../utils/tts";
 
 /**
- * HTTP handler that returns synthesized MP3 audio for provided text.
- * @param {Request} req - Express request with `text` in the body.
- * @param {Response} res - Express response used to send audio bytes.
- * @return {Promise<void>} Resolves when response is sent.
+ * Returns synthesized MP3 audio.
+ * Body: { text: string, rate?: number }  (rate 0.5 = slow learner mode)
+ * @param {Request} req - Express request
+ * @param {Response} res - Express response
  */
 export async function ttsHandler(req: Request, res: Response) {
   try {
-    const {text} = req.body;
-
-    const audio = await generateSpeech(text);
+    const text = String(req.body?.text ?? "").trim();
+    if (!text) {
+      res.status(400).json({error: "text is required"});
+      return;
+    }
+    if (text.length > 1500) {
+      res.status(400).json({error: "text too long (max 1500 chars)"});
+      return;
+    }
+    const rate = Number(req.body?.rate) || 0.9;
+    const audio = await generateSpeech(text, rate);
 
     res.set({
       "Content-Type": "audio/mpeg",
       "Content-Disposition": "inline; filename=sher.mp3",
+      "Cache-Control": "public, max-age=86400",
     });
-
     res.send(audio);
   } catch (err) {
     console.error("TTS error:", err);
-    res.status(500).json({error: "TTS failed"});
+    res.status(500).json({error: "Text-to-speech failed"});
   }
 }

@@ -41,18 +41,33 @@ export async function sendImageForOCR(file: File): Promise<OCRResult> {
       errorData.message ||
       errorData.error ||
       `HTTP ${res.status}: ${res.statusText}`;
-    throw new Error(`OCR request failed: ${errorMessage}`);
+    throw new Error(errorMessage);
   }
 
   const data = await res.json();
   return data as OCRResult;
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () =>
-      resolve((reader.result as string).split(",")[1]);
-    reader.readAsDataURL(file);
-  });
+/**
+ * Downscales big phone photos (often 4–12 MB) to ≤1600px JPEG before upload.
+ * Faster uploads, stays under the API body limit, and OCR quality is the same.
+ */
+async function fileToBase64(file: File): Promise<string> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    return dataUrl.split(",")[1];
+  } catch {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
 }

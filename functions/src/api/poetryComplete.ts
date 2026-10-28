@@ -1,5 +1,5 @@
 import type {Request, Response} from "express";
-import {getGenAI} from "../services/gemini.service";
+import {getGenAI, modelName} from "../services/gemini.service";
 
 /**
  * Completes an Urdu sher in classical style. Output is clearly labeled as
@@ -17,16 +17,15 @@ export async function poetryComplete(
     if (
       !line ||
       typeof line !== "string" ||
-      !line.trim()
+      !line.trim() ||
+      line.length > 300
     ) {
       res.status(400).json({error: "line is required"});
       return;
     }
 
     const genAI = getGenAI();
-    const modelName =
-      process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const model = genAI.getGenerativeModel({model: modelName});
+    const model = genAI.getGenerativeModel({model: modelName()});
 
     const prompt = `
 Complete this Urdu sher in classical style:

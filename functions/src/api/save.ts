@@ -3,10 +3,10 @@ import type {Request, Response} from "express";
 import {getFirestore, Timestamp, FieldValue} from "firebase-admin/firestore";
 import {createEmbedding} from "../utils/embedding.js";
 import {generateKeywords} from "../utils/keywords.js";
-import {updateStreak} from "../utils/streak.js";
 import {extractPoet} from "../utils/metadata.js";
 import {getEraFromPoet, getMovementFromPoet} from "../utils/poetMeta.js";
 import {updateUserStats} from "../utils/updateUserStats";
+import {invalidateCorpus} from "../utils/corpus";
 
 /**
  * Detects high-level thematic tags from a poem's text.
@@ -19,16 +19,23 @@ function detectThemes(text: string): string[] {
   const lower = text.toLowerCase();
   const themes: string[] = [];
 
-  if (lower.includes("ishq") || lower.includes("mohabbat")) {
+  const has = (...words: string[]) => words.some((w) => lower.includes(w));
+
+  // Text is usually Devanagari, so match both scripts.
+  if (has("ishq", "mohabbat", "इश्क़", "इश्क", "मोहब्बत", "मुहब्बत", "प्यार")) {
     themes.push("love");
   }
-
-  if (lower.includes("hijr") || lower.includes("judai")) {
+  if (has("hijr", "judai", "हिज्र", "जुदाई", "इंतिज़ार", "इंतज़ार", "याद")) {
     themes.push("longing");
   }
-
-  if (lower.includes("inqilab") || lower.includes("azaadi")) {
+  if (has("inqilab", "azaadi", "इंक़लाब", "इन्क़लाब", "आज़ादी", "ज़ुल्म")) {
     themes.push("rebellion");
+  }
+  if (has("ग़म", "दर्द", "आँसू", "अश्क", "gham", "dard")) {
+    themes.push("sorrow");
+  }
+  if (has("ख़ुदा", "रब", "सजदा", "khuda", "ibadat", "इबादत")) {
+    themes.push("spiritual");
   }
 
   if (themes.length === 0) {
@@ -145,21 +152,10 @@ export async function saveHandler(req: AuthRequest, res: Response) {
           },
           {merge: true}
         );
+      invalidateCorpus();
     }
 
-    const userRef = db.collection("users").doc(uid);
-    const snap = await userRef.get();
-    const today = new Date().toISOString().slice(0, 10);
-    const newStreak = updateStreak(snap.data() || {});
-
-    await userRef.set(
-      {
-        streak: newStreak,
-        lastActiveDate: today,
-      },
-      {merge: true}
-    );
-
+    // single source of truth for streaks + counters
     await updateUserStats(uid, "totalScans");
 
     return res.json({success: true});

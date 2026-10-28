@@ -17,7 +17,7 @@ export async function getScanHandler(req: AuthRequest, res: Response) {
       return res.status(401).json({error: "Unauthorized"});
     }
 
-    const scanId = req.params.scanId;
+    const scanId = String(req.params.scanId || "");
     if (!scanId) {
       return res.status(400).json({error: "Scan ID required"});
     }

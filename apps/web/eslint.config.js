@@ -19,5 +19,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Legacy pages still use loose Firestore types; tighten over time.
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
   },
 ])

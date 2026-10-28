@@ -3,7 +3,7 @@ import {waitForAuth} from "./auth.service";
 
 export async function callHistory() {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch(
     api.history,
@@ -40,7 +40,7 @@ export async function fetchHistory() {
 // Fetch a single scan by id via backend (avoids Firestore client rules)
 export async function fetchScanById(id: string) {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const url = `${api.history}/${encodeURIComponent(id)}`;
   const res = await fetch(url, {
@@ -73,7 +73,7 @@ export async function saveHistory(data: {
   attributionConfidence?: number;
 }) {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch(api.save, {
     method: "POST",
@@ -103,7 +103,7 @@ export async function saveHistory(data: {
 
 export async function lookupDictionary(word: string) {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch(api.dictionary, {
     method: "POST",
@@ -130,7 +130,7 @@ export async function lookupDictionary(word: string) {
 
 export async function saveVocabulary(word: string, meaning: string) {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch(api.vocabulary, {
     method: "POST",
@@ -159,14 +159,22 @@ export type VocabularyItem = {
   id: string;
   word: string;
   meaning: string;
+  roman?: string;
+  tip?: string;
+  source?: "dictionary" | "ustad" | "manual";
   strength: number;
+  interval: number;
+  repetitions: number;
+  dueAt: number | null;
+  isDue: boolean;
+  mistakes: number;
   lastReviewed: unknown;
   addedAt: unknown;
 };
 
 export async function fetchVocabulary(): Promise<VocabularyItem[]> {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch(api.vocabulary, {
     method: "GET",
@@ -189,7 +197,7 @@ export async function fetchVocabulary(): Promise<VocabularyItem[]> {
 
 export async function saveWord(word: string, meaning: string) {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch(api.wordSave, {
     method: "POST",
@@ -216,7 +224,7 @@ export async function saveWord(word: string, meaning: string) {
 
 export async function reviewWord(wordId: string, rating: number) {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const res = await fetch(api.wordReview, {
     method: "PUT",
@@ -238,12 +246,12 @@ export async function reviewWord(wordId: string, rating: number) {
     throw new Error(message);
   }
 
-  return res.json() as Promise<{ success: boolean; strength: number }>;
+  return res.json() as Promise<{ success: boolean; strength: number; interval: number; dueAt: number }>;
 }
 
 export async function reviewVocabulary(wordId: string, quality: number) {
   const user = await waitForAuth();
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
 
   const url = `${api.vocabulary}/${encodeURIComponent(wordId)}/review`;
   const res = await fetch(url, {
@@ -266,5 +274,5 @@ export async function reviewVocabulary(wordId: string, quality: number) {
     throw new Error(message);
   }
 
-  return res.json() as Promise<{ success: boolean; strength: number }>;
+  return res.json() as Promise<{ success: boolean; strength: number; interval: number; dueAt: number }>;
 }

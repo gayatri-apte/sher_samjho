@@ -1,6 +1,6 @@
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
-import {getGenAI} from "../services/gemini.service";
+import {getGenAI, modelName} from "../services/gemini.service";
 import {incrementStat} from "../utils/updateAnalytics";
 
 const SAFETY_FINISH_REASONS = [
@@ -22,18 +22,14 @@ const SAFETY_FINISH_REASONS = [
  */
 export async function poetryChat(req: Request, res: Response): Promise<void> {
   try {
-    const {textHash, question, level} = req.body as {
+    const {textHash, question, level, history} = req.body as {
       textHash?: string;
       question?: string;
       level?: string;
+      history?: Array<{role: string; text: string}>;
     };
-    console.log("poetryChat request", {
-      textHash: textHash?.slice(0, 12),
-      hasQuestion: !!question,
-      level,
-    });
 
-    if (!textHash || !question) {
+    if (!textHash || !question || String(question).length > 1000) {
       res.status(400).json({error: "textHash and question are required"});
       return;
     }
@@ -66,9 +62,12 @@ export async function poetryChat(req: Request, res: Response): Promise<void> {
     };
 
     const genAI = getGenAI();
-    const modelName =
-      process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const model = genAI.getGenerativeModel({model: modelName});
+    const model = genAI.getGenerativeModel({model: modelName()});
+    const convo = Array.isArray(history) ?
+      history.slice(-6).map((m) =>
+        `${m.role === "ai" ? "You" : "User"}: ${String(m.text).slice(0, 600)}`
+      ).join("\n") :
+      "";
 
     const intertextualInstruction =
       effectiveLevel === "scholar" ?
@@ -89,11 +88,13 @@ ${levelInstruction[effectiveLevel]}
 
 Sher:
 ${rawUrdu}
-
+${data?.devanagariText && data?.devanagariText !== rawUrdu ?
+    `\nDevanagari:\n${data.devanagariText}\n` : ""}
 Poet: ${poet}
 
 User level: ${effectiveLevel}
 
+${convo ? `Conversation so far:\n${convo}\n` : ""}
 User question:
 ${question}
 
@@ -103,6 +104,9 @@ Rules:
 - Mention that AI interpretations may vary.
 - Do NOT fabricate sources or attributions.
 - Keep the tone and depth appropriate to the user's level.
+- Answer in the language the user asked in (Hinglish → Hinglish).
+- Keep it under 150 words unless the user asks for more; it may be read
+  aloud, so avoid markdown tables.
 - Also mention if this sher references:
   - Another poet
   - A Quranic phrase

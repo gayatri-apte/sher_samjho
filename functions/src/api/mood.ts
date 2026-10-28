@@ -1,75 +1,35 @@
 import type {Request, Response} from "express";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {createEmbedding} from "../utils/embedding.js";
+import {nearest} from "../utils/corpus";
+import {toPublicSher} from "../utils/vectors";
 
 /**
- * Cosine similarity between two vectors.
- * @param {number[]} a - First vector
- * @param {number[]} b - Second vector
- * @return {number} Similarity in [-1, 1]
- */
-function cosineSimilarity(a: number[], b: number[]) {
-  const dot = a.reduce((s, v, i) => s + v * b[i], 0);
-  const magA = Math.sqrt(a.reduce((s, v) => s + v * v, 0));
-  const magB = Math.sqrt(b.reduce((s, v) => s + v * v, 0));
-  return dot / (magA * magB);
-}
-
-/**
- * Mood-based discovery: embed mood query, return top matches by similarity.
+ * Mood-based discovery: tagged moods/themes first, then embedding search.
  * @param {Request} req - Request with body.mood
  * @param {Response} res - Express response
  */
 export async function moodSearch(req: Request, res: Response) {
-  const db = admin.firestore();
-  const {mood} = req.body;
+  try {
+    const mood = String(req.body?.mood ?? "").trim().toLowerCase();
+    if (!mood) return res.status(400).json({error: "Mood required"});
 
-  if (!mood) {
-    return res.status(400).json({error: "Mood required"});
+    const col = getFirestore().collection("global_poetry_cache");
+    for (const q of [
+      col.where("mood", "==", mood),
+      col.where("moods", "array-contains", mood),
+      col.where("themes", "array-contains", mood),
+    ]) {
+      const snap = await q.limit(20).get();
+      if (!snap.empty) {
+        return res.json(snap.docs.map((d) => toPublicSher(d.id, d.data())));
+      }
+    }
+
+    const vector = await createEmbedding(`Urdu poetry about ${mood}`);
+    return res.json(await nearest(vector, 10));
+  } catch (err) {
+    console.error("moodSearch error:", err);
+    return res.status(500).json({error: "Mood search failed"});
   }
-
-  const normalizedMood = String(mood).trim().toLowerCase();
-
-  // 1) Prefer explicit mood tags on documents if available
-  const taggedSnap = await db
-    .collection("global_poetry_cache")
-    .where("mood", "==", normalizedMood)
-    .limit(20)
-    .get();
-
-  if (!taggedSnap.empty) {
-    const taggedResults = taggedSnap.docs.map((doc) => doc.data());
-    return res.json(taggedResults);
-  }
-
-  // 2) Fallback: if there's a "moods" array, use that
-  const arrayTaggedSnap = await db
-    .collection("global_poetry_cache")
-    .where("moods", "array-contains", normalizedMood)
-    .limit(20)
-    .get();
-
-  if (!arrayTaggedSnap.empty) {
-    const arrayTaggedResults = arrayTaggedSnap.docs.map((doc) => doc.data());
-    return res.json(arrayTaggedResults);
-  }
-
-  // 3) Last resort: embedding-based similarity across whole corpus
-  const moodEmbedding = await createEmbedding(normalizedMood);
-
-  const snaps = await db.collection("global_poetry_cache").get();
-
-  const results = snaps.docs
-    .map((doc) => {
-      const data = doc.data();
-      const emb = data.embedding as number[] | undefined;
-      if (!emb) return null;
-      const score = cosineSimilarity(moodEmbedding, emb);
-      return {...data, score};
-    })
-    .filter((x): x is NonNullable<typeof x> => x != null)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
-
-  return res.json(results);
 }

@@ -9,7 +9,7 @@ type LeaderboardUser = {
   longestStreak?: number;
   totalReviews?: number;
   totalScans?: number;
-  masteryScore?: number;
+  bestRecitationScore?: number;
 };
 
 export default function LeaderboardPage() {
@@ -105,7 +105,7 @@ export default function LeaderboardPage() {
       <h1 className="text-3xl mb-6">Top Learners</h1>
 
       {users.length === 0 && (
-        <p className="text-neutral-400">No learners yet. Start your streak!</p>
+        <p className="text-[#94725a]">No learners yet. Start your streak!</p>
       )}
 
       <div className="space-y-3">
@@ -116,13 +116,16 @@ export default function LeaderboardPage() {
           >
             <span className="text-[#94725a]">#{i + 1}</span>
             <span className="flex-1 mx-4 truncate">
-              {u.displayName || u.id}
+              {u.displayName || "Learner"}
             </span>
             <span className="text-sm text-[#5a3a28]">
               {(u.currentStreak ?? u.longestStreak ?? 0)} day streak
             </span>
             <span className="text-sm text-[#b08a6a] ml-4">
               {u.totalReviews ?? 0} reviews
+            </span>
+            <span className="text-sm text-[#b08a6a] ml-4 hidden sm:inline">
+              best recital {u.bestRecitationScore ?? 0}
             </span>
           </div>
         ))}
