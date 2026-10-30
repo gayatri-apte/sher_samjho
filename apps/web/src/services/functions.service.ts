@@ -52,6 +52,7 @@ export type VocabularyItem = {
   strength: number;
   interval: number;
   repetitions: number;
+  easiness?: number;
   dueAt: number | null;
   isDue: boolean;
   mistakes: number;
@@ -66,7 +67,7 @@ export function fetchVocabulary() {
 export const saveWord = saveVocabulary;
 
 export function reviewVocabulary(wordId: string, quality: number) {
-  return apiJSON<{ success: boolean; strength: number; interval: number; dueAt: number }>(
+  return apiJSON<{ success: boolean; strength: number; interval: number; repetitions?: number; easiness?: number; dueAt: number }>(
     `${api.vocabulary}/${encodeURIComponent(wordId)}/review`,
     { method: "PATCH", body: { quality }, requireAuth: true },
   );

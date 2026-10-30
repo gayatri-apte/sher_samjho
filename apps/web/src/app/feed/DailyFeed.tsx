@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mic2, Shuffle, Sparkles } from "lucide-react";
+import TappableSher from "../../components/TappableSher";
 import Page, { Card, ErrorNote } from "../../components/ui/Page";
 import SpeakButton from "../../components/voice/SpeakButton";
 import { api } from "../../config/api";
@@ -55,9 +56,8 @@ export default function DailyFeed() {
               {new Date(sher.date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
             </p>
           )}
-          <p lang="hi" className="font-deva text-2xl sm:text-3xl leading-relaxed text-center whitespace-pre-line text-[#3b2419]">
-            {sher.devanagariText}
-          </p>
+          <TappableSher text={sher.devanagariText ?? ""} className="text-2xl sm:text-3xl leading-relaxed text-center text-[#3b2419]" />
+          <p className="mt-2 text-center text-xs text-[#b08a6a]">Tap a word for its meaning</p>
           {sher.poet && sher.poet !== "Unknown" && <p className="mt-4 text-center text-[#94725a]">— {sher.poet}</p>}
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">

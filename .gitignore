@@ -32,3 +32,5 @@ firebase-debug*.log
 # Firebase local
 .firebase/
 dataconnect/.dataconnect/
+
+sher-scan-samples.zip

@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mic2, Sparkles } from "lucide-react";
 import SpeakButton from "../../components/voice/SpeakButton";
+import TappableSher from "../../components/TappableSher";
 
 export default function ReaderPage() {
   const navigate = useNavigate();
@@ -40,9 +41,8 @@ export default function ReaderPage() {
       <div className="max-w-4xl mx-auto text-center">
         <p className="text-[11px] tracking-[0.3em] uppercase text-[#b08a6a] mb-4">Reading mode</p>
         <div className="rounded-3xl bg-[#fff7ef] border border-[#e2c9ad] px-6 sm:px-10 py-10 sm:py-16 shadow-md">
-          <div lang="hi" className="font-deva whitespace-pre-wrap break-words text-3xl sm:text-4xl md:text-5xl leading-relaxed font-semibold">
-            {text}
-          </div>
+          <TappableSher text={text} className="text-3xl sm:text-4xl md:text-5xl leading-relaxed font-semibold" />
+          <p className="mt-4 text-xs text-[#b08a6a]">Tap any word for its meaning and add it to your practice deck</p>
           {state?.poet && <p className="mt-6 text-[#94725a]">— {state.poet}</p>}
         </div>
 

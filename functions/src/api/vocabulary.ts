@@ -108,9 +108,10 @@ export async function getVocabularyHandler(req: AuthRequest, res: Response) {
 
     const snap = await getFirestore()
       .collection("users").doc(uid).collection("vocabulary")
-      .orderBy("addedAt", "desc")
       .limit(500)
       .get();
+    // No orderBy: Firestore silently drops docs that lack the field, which
+    // hid words saved by older versions of the app. Sort in memory instead.
 
     const now = Date.now();
     let words: VocabularyEntry[] = snap.docs.map((doc) => {
@@ -123,8 +124,8 @@ export async function getVocabularyHandler(req: AuthRequest, res: Response) {
       };
       return {
         id: doc.id,
-        word: d.word ?? "",
-        meaning: d.meaning ?? "",
+        word: d.word ?? d.text ?? "",
+        meaning: d.meaning ?? d.definition ?? "",
         roman: d.roman ?? "",
         tip: d.tip ?? "",
         source: d.source ?? "dictionary",
@@ -134,12 +135,14 @@ export async function getVocabularyHandler(req: AuthRequest, res: Response) {
         isDue: dueAt == null || dueAt <= now,
         mistakes: Number(d.mistakes) || 0,
         lastReviewed: ts(d.lastReviewed),
-        addedAt: ts(d.addedAt),
+        addedAt: ts(d.addedAt ?? d.createdAt ?? d.savedAt),
       };
-    });
+    }).filter((w) => w.word);
 
     if (req.query.due === "1") words = words.filter((w) => w.isDue);
-    words.sort((a, b) => Number(b.isDue) - Number(a.isDue));
+    words.sort((a, b) =>
+      Number(b.isDue) - Number(a.isDue) ||
+      (b.addedAt?.seconds ?? 0) - (a.addedAt?.seconds ?? 0));
     return res.json(words);
   } catch (err: unknown) {
     console.error("Get vocabulary error:", err);
@@ -193,7 +196,10 @@ async function applyReview(uid: string, id: string, quality: number) {
     repetitions: Number(d.repetitions) || 0,
   }, quality);
   const strength = strengthOf(next);
-  const dueAt = Timestamp.fromMillis(Date.now() + next.interval * 86400000);
+  // Forgotten (q<3): relearn in 10 minutes; the SM-2 interval (1 day) then
+  // applies from the next successful review.
+  const dueAt = Timestamp.fromMillis(Date.now() + (quality < 3 ?
+    10 * 60000 : next.interval * 86400000));
   await ref.update({
     ...next,
     strength,

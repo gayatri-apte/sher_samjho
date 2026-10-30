@@ -15,7 +15,26 @@ import { useAuth } from "../../hooks/useAuth";
 type ScriptView = "dev" | "urdu" | "roman" | "all";
 type Level = "beginner" | "intermediate" | "scholar";
 
-const POETS = ["Mirza Ghalib", "Mir Taqi Mir", "Faiz Ahmed Faiz", "Allama Iqbal", "Jaun Elia", "Ahmad Faraz"];
+const POETS = [
+  "Mirza Ghalib", "Mir Taqi Mir", "Allama Iqbal", "Momin Khan Momin", "Daagh Dehlvi",
+  "Sheikh Ibrahim Zauq", "Khwaja Mir Dard", "Bahadur Shah Zafar", "Faiz Ahmed Faiz", "Jaun Elia", "Ahmad Faraz",
+];
+
+// Printed-page samples in public/samples, so anyone can try Scan without a book.
+const SAMPLES: Array<{ file: string; label: string; poet: string; urdu?: boolean }> = [
+  { file: "01-ghalib-dushvar.jpg", label: "Bas-ki dushvar hai", poet: "Mirza Ghalib" },
+  { file: "02-ghalib-dil-hi-to-hai.jpg", label: "Dil hi to hai", poet: "Mirza Ghalib" },
+  { file: "03-ghalib-andaz-e-bayan.jpg", label: "Andaz-e-bayan aur", poet: "Mirza Ghalib" },
+  { file: "04-mir-rah-e-door.jpg", label: "Rah-e-door-e-ishq", poet: "Mir Taqi Mir" },
+  { file: "05-mir-dil-ki-veerani.jpg", label: "Dil ki veerani", poet: "Mir Taqi Mir" },
+  { file: "06-iqbal-khudi.jpg", label: "Khudi ko kar buland", poet: "Allama Iqbal" },
+  { file: "07-iqbal-na-umeed.jpg", label: "Nahin hai na-umeed", poet: "Allama Iqbal" },
+  { file: "08-momin-umr-saari.jpg", label: "Umr saari to kati", poet: "Momin Khan Momin" },
+  { file: "12-daagh-ghazab-kiya.jpg", label: "Ghazab kiya", poet: "Daagh Dehlvi" },
+  { file: "09-urdu-ghalib-bas-ki.jpg", label: "بس کہ دشوار ہے", poet: "Mirza Ghalib", urdu: true },
+  { file: "10-urdu-iqbal-sitaron-se-aage.jpg", label: "ستاروں سے آگے", poet: "Allama Iqbal", urdu: true },
+  { file: "11-urdu-daagh-ghazab-kiya.jpg", label: "غضب کیا", poet: "Daagh Dehlvi", urdu: true },
+];
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -92,6 +111,13 @@ export default function ScanPage() {
     }
   }
 
+  async function pickSample(sample: (typeof SAMPLES)[number]) {
+    const blob = await (await fetch(`/samples/${sample.file}`)).blob();
+    setPoet(sample.poet);
+    setSaved(false);
+    setImage(new File([blob], sample.file, { type: "image/jpeg" }));
+  }
+
   function startOver() {
     setImage(null);
     reset();
@@ -110,6 +136,24 @@ export default function ScanPage() {
           <ScanLine size={40} className="text-[#c26a3b]" />
           <CameraCapture onCapture={setImage} />
           <ImageUpload onSelect={setImage} />
+          <div className="w-full pt-5 mt-1 border-t border-[#ecd6bd]">
+            <p className="text-sm text-[#7d5b44] mb-3 text-center">No book handy? Try a sample page:</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {SAMPLES.map((s) => (
+                <button
+                  key={s.file}
+                  type="button"
+                  onClick={() => pickSample(s)}
+                  className="group rounded-xl overflow-hidden border border-[#ecd6bd] bg-[#fff8f0] hover:border-[#c26a3b] text-left"
+                >
+                  <img src={`/samples/${s.file}`} alt={s.label} loading="lazy" className="w-full aspect-[4/5] object-cover object-center group-hover:opacity-90" />
+                  <span className={`block px-2 py-1.5 text-[11px] leading-tight text-[#5a3a28] truncate ${s.urdu ? "font-urdu text-right" : ""}`} dir={s.urdu ? "rtl" : undefined}>
+                    {s.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </Card>
       )}
 

@@ -38,19 +38,38 @@ export default function VocabularyPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Session queue: due words, and "Again" cards go to the back so they
+  // come round again before the session ends (as in Anki / SuperMemo).
+  const [queue, setQueue] = useState<string[]>([]);
+  const [lastResult, setLastResult] = useState<string | null>(null);
   const due = useMemo(() => words.filter((w) => w.isDue), [words]);
-  const card = due[0];
+  const card = words.find((w) => w.id === queue[0]);
+
+  function startReview() {
+    setQueue(due.map((w) => w.id));
+    setReviewMode(true);
+    setRevealed(false);
+    setLastResult(null);
+  }
 
   async function grade(id: string, q: number) {
     setBusy(true);
     try {
       const r = await reviewVocabulary(id, q);
+      const forgot = q < 3;
       setWords((prev) =>
         prev.map((w) =>
           w.id === id
-            ? { ...w, strength: r.strength, interval: r.interval, dueAt: r.dueAt, isDue: false }
+            ? { ...w, strength: r.strength, interval: r.interval, repetitions: r.repetitions ?? w.repetitions, dueAt: r.dueAt, isDue: forgot }
             : w,
         ),
+      );
+      setQueue((qu) => (forgot ? [...qu.slice(1), id] : qu.slice(1)));
+      const word = words.find((w) => w.id === id)?.word ?? "";
+      setLastResult(
+        forgot
+          ? `${word}: we'll show it again in this session`
+          : `${word}: next review in ${r.interval} day${r.interval === 1 ? "" : "s"}`,
       );
       setRevealed(false);
     } catch (e) {
@@ -58,6 +77,15 @@ export default function VocabularyPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  /** What each button would schedule, so the SM-2 maths is visible. */
+  function preview(w: VocabularyItem, q: number) {
+    if (q < 3) return "again";
+    const reps = (w.repetitions || 0) + 1;
+    const ef = w.easiness ?? 2.5;
+    const days = reps === 1 ? 1 : reps === 2 ? 6 : Math.round((w.interval || 1) * ef);
+    return `${days}d`;
   }
 
   return (
@@ -94,7 +122,7 @@ export default function VocabularyPage() {
           {!reviewMode && due.length > 0 && (
             <button
               type="button"
-              onClick={() => setReviewMode(true)}
+              onClick={startReview}
               className="mb-6 w-full py-3 rounded-full bg-[#c26a3b] hover:bg-[#a9552a] text-white font-medium"
             >
               Review {due.length} due word{due.length > 1 ? "s" : ""}
@@ -106,7 +134,7 @@ export default function VocabularyPage() {
               {card ? (
                 <>
                   <span className="text-xs uppercase tracking-[0.25em] text-[#b08a6a]">
-                    {due.length} left
+                    {queue.length} left
                   </span>
                   <div className="mt-4 flex items-center justify-center gap-2">
                     <span className="font-deva text-4xl text-[#3b2419]">{card.word}</span>
@@ -142,6 +170,7 @@ export default function VocabularyPage() {
                             className={`py-2 rounded-xl border text-sm font-medium disabled:opacity-50 ${g.cls}`}
                           >
                             {g.label}
+                            <span className="block text-[10px] opacity-70">{preview(card, g.q)}</span>
                           </button>
                         ))}
                       </div>
@@ -151,6 +180,7 @@ export default function VocabularyPage() {
               ) : (
                 <p className="text-[#3f7d3a] font-medium">All caught up for today. Shabaash! 🌙</p>
               )}
+              {lastResult && <p className="mt-4 text-xs text-[#94725a]">{lastResult}</p>}
               <button
                 type="button"
                 onClick={() => setReviewMode(false)}
