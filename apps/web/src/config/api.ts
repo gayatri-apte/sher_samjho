@@ -28,6 +28,7 @@ export const api = {
   dailySher: `${b}/feed/daily`,
   poet: (name: string) => `${b}/poet/${encodeURIComponent(name)}`,
   seed: `${b}/admin/seed`,
+  health: `${b}/health`,
   poetryChat: `${b}/poetry-chat`,
   poetryComplete: `${b}/poetry-complete`,
   tts: `${b}/tts`,

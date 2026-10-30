@@ -30,6 +30,12 @@ export default function VocabularyPage() {
   const [reviewMode, setReviewMode] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [slow, setSlow] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     fetchVocabulary()
@@ -93,9 +99,21 @@ export default function VocabularyPage() {
       title="Practice deck"
       subtitle="Words you looked up and words Ustad caught you mispronouncing, scheduled with spaced repetition (SM-2) so each one comes back just before you'd forget it."
     >
-      {error && <ErrorNote>{error}</ErrorNote>}
+      {error && (
+        <ErrorNote>
+          {error}{" "}
+          {/sign in/i.test(error) && <Link to="/login" className="underline">Sign in</Link>}
+        </ErrorNote>
+      )}
       {loading ? (
-        <p className="text-[#94725a]">Loading…</p>
+        <div className="space-y-3" aria-busy="true">
+          <p className="text-[#94725a]">
+            {slow ? "Waking up the server — the first load after a break takes a few seconds…" : "Loading your deck…"}
+          </p>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-20 rounded-2xl bg-[#f6e6d4] animate-pulse" />
+          ))}
+        </div>
       ) : words.length === 0 ? (
         <Card className="text-center">
           <BookMarked className="mx-auto text-[#c26a3b]" />
