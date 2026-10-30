@@ -22,6 +22,18 @@ const PER_CALL = 4; // keeps each call well inside the 180 s timeout
 export async function seedClassicsHandler(_req: Request, res: Response) {
   try {
     const col = getFirestore().collection("global_poetry_cache");
+
+    // Clean-up: an early version of the sample pages had a "Kulliyaat ·
+    // Diwan" header and page number that OCR read into the sher. Remove
+    // those scans; the clean sample pages can be scanned again.
+    const junk = await col.where("script", "==", "devanagari").get();
+    const bad = junk.docs.filter((d) =>
+      /^\s*KULLIYA+T|^\s*Kulliya+t/.test(String(d.get("rawUrdu") ?? "")));
+    await Promise.all(bad.map((d) => d.ref.delete()));
+    const urduJunk = await col.where("script", "==", "urdu").get();
+    const bad2 = urduJunk.docs.filter((d) =>
+      /^\s*KULLIYA+T|^\s*Kulliya+t/i.test(String(d.get("rawUrdu") ?? "")));
+    await Promise.all(bad2.map((d) => d.ref.delete()));
     const missing = [];
     for (const c of CLASSICS) {
       const id = createHash(c.devanagari);
@@ -61,6 +73,7 @@ export async function seedClassicsHandler(_req: Request, res: Response) {
     invalidateCorpus();
     res.json({
       added: batch.length,
+      cleaned: bad.length + bad2.length,
       remaining: missing.length - batch.length,
       total: CLASSICS.length,
     });

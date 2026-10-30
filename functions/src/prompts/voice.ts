@@ -208,8 +208,9 @@ Do this:
    sher + correct rule + good recitation.
 6. "verdict": one lively sentence of judge commentary in Hinglish.
 7. "aiSher": YOUR reply — a REAL, well-known sher (no inventing) that starts
-   with the player's lastLetter and is not already used. Give Devanagari,
-   Roman, poet and a one-line English meaning.
+   with the player's lastLetter and is not already used. Give it in Urdu
+   (Perso-Arabic) script, Devanagari and Roman, with the poet and a one-line
+   English meaning.
 8. "nextLetter": the last letter of YOUR sher, formatted like "म / م (meem)" —
    the player must start with this next.`;
 }
@@ -217,12 +218,13 @@ Do this:
 const sherObj: ResponseSchema = {
   type: SchemaType.OBJECT,
   properties: {
+    urdu: {type: SchemaType.STRING},
     devanagari: {type: SchemaType.STRING},
     roman: {type: SchemaType.STRING},
     poet: {type: SchemaType.STRING},
     meaning: {type: SchemaType.STRING},
   },
-  required: ["devanagari", "roman", "poet", "meaning"],
+  required: ["urdu", "devanagari", "roman", "poet", "meaning"],
 } as ResponseSchema;
 
 export const baitBaziSchema: ResponseSchema = {

@@ -277,6 +277,44 @@ export async function findSherHandler(req: AuthRequest, res: Response) {
   }
 }
 
+const URDU_LETTERS: Record<string, [string, string]> = {
+  "ا": ["अ", "alif"], "آ": ["अ", "alif"], "ب": ["ब", "be"], "پ": ["प", "pe"],
+  "ت": ["त", "te"], "ٹ": ["ट", "ṭe"], "ث": ["स", "se"], "ج": ["ज", "jeem"],
+  "چ": ["च", "che"], "ح": ["ह", "baṛi he"], "خ": ["ख़", "khe"],
+  "د": ["द", "daal"], "ڈ": ["ड", "ḍaal"], "ذ": ["ज़", "zaal"], "ر": ["र", "re"],
+  "ڑ": ["ड़", "ṛe"], "ز": ["ज़", "ze"], "ژ": ["ज़", "zhe"], "س": ["स", "seen"],
+  "ش": ["श", "sheen"], "ص": ["स", "suad"], "ض": ["ज़", "zuad"],
+  "ط": ["त", "toe"], "ظ": ["ज़", "zoe"], "ع": ["अ", "ain"],
+  "غ": ["ग़", "ghain"], "ف": ["फ़", "fe"], "ق": ["क़", "qaaf"],
+  "ک": ["क", "kaaf"], "ك": ["क", "kaaf"], "گ": ["ग", "gaaf"],
+  "ل": ["ल", "laam"], "م": ["म", "meem"], "ن": ["न", "noon"],
+  "ں": ["न", "noon"], "و": ["व", "vao"], "ہ": ["ह", "he"], "ۂ": ["ह", "he"],
+  "ة": ["ह", "he"], "ه": ["ह", "he"], "ی": ["य", "ye"], "ي": ["य", "ye"],
+  "ے": ["य", "ye"], "ۓ": ["य", "ye"], "ئ": ["य", "ye"], "ء": ["अ", "hamza"],
+};
+
+/**
+ * Last letter of an Urdu sher by spelling (ignores diacritics, punctuation
+ * and the aspiration mark ھ), formatted like "म / م (meem)".
+ * @param {string} urdu - Sher in Perso-Arabic script
+ * @return {string | null} Letter label, or null if it can't be read
+ */
+export function lastUrduLetter(urdu: string): string | null {
+  // Drop harakat / Quranic marks (U+064B–065F, 0670, 06D4–06ED).
+  const isMark = (c: string) => {
+    const n = c.codePointAt(0) ?? 0;
+    return (n >= 0x064b && n <= 0x065f) || n === 0x0670 ||
+      (n >= 0x06d4 && n <= 0x06ed);
+  };
+  const chars = [...urdu].filter((c) => !isMark(c))
+    .filter((c) => c !== "ھ" && URDU_LETTERS[c]);
+  const last = chars[chars.length - 1];
+  if (!last) return null;
+  const base = last === "ں" ? "ن" : last === "ۂ" ? "ہ" : last;
+  const [deva, name] = URDU_LETTERS[last];
+  return `${deva} / ${base} (${name})`;
+}
+
 type BaitBaziOut = {
   heard: string;
   isRecognizedSher: boolean;
@@ -286,7 +324,10 @@ type BaitBaziOut = {
   followsRule: boolean;
   points: number;
   verdict: string;
-  aiSher: {devanagari: string; roman: string; poet: string; meaning: string};
+  aiSher: {
+    urdu?: string; devanagari: string; roman: string; poet: string;
+    meaning: string;
+  };
   nextLetter: string;
 };
 
@@ -330,8 +371,12 @@ export async function baitBaziHandler(req: AuthRequest, res: Response) {
       Math.max(0, Math.min(10, Math.round(Number(out.points) || 0))) :
       0;
 
+    // The model often names the wrong closing letter of its own sher, which
+    // breaks the game. Work it out from the Urdu spelling instead.
+    const next = lastUrduLetter(out.aiSher?.urdu ?? "");
     await incrementStat("totalBaitBaziTurns");
-    res.json({...out, points, aiGenerated: true});
+    res.json({...out, nextLetter: next ?? out.nextLetter, points,
+      aiGenerated: true});
   } catch (err) {
     await fail(res, err, "Bait-bazi");
   }

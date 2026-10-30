@@ -61,7 +61,10 @@ async function listFallbacks(): Promise<string[]> {
   try {
     const r = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
-      {headers: {"x-goog-api-key": process.env.GEMINI_API_KEY || ""}},
+      {
+        headers: {"x-goog-api-key": process.env.GEMINI_API_KEY || ""},
+        signal: AbortSignal.timeout(8000),
+      },
     );
     const j = await r.json() as {models?: Array<{
       name: string; supportedGenerationMethods?: string[];
@@ -125,10 +128,12 @@ export function genConfig(
  * @return {GenerativeModel} Model
  */
 export function getModel(extra: Record<string, unknown> = {}) {
+  // Per-attempt timeout: a hung request becomes an error that withRetry
+  // can retry or move to another model, instead of eating the 180 s limit.
   return getGenAI().getGenerativeModel({
     model: modelName(),
     generationConfig: genConfig(extra) as never,
-  });
+  }, {timeout: Number(process.env.GEMINI_TIMEOUT_MS) || 40_000});
 }
 
 /**
@@ -165,7 +170,9 @@ export async function withRetry<T>(
       // this key (404): move to another model and retry straight away.
       const quota = /\[429|resource_exhausted|quota/.test(m);
       const missing = m.includes("[404") && m.includes("model");
-      if ((quota || missing) && canSwitchModel && i < attempts - 1 &&
+      const timedOut = /abort|timed? ?out|timeout/.test(m);
+      const switchable = quota || missing || timedOut;
+      if (switchable && canSwitchModel && i < attempts - 1 &&
           await switchModel()) {
         continue;
       }
