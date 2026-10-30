@@ -3,6 +3,7 @@ import {getFirestore} from "firebase-admin/firestore";
 import {createEmbedding} from "../utils/embedding.js";
 import {nearest} from "../utils/corpus";
 import {toPublicSher} from "../utils/vectors";
+import {sendError} from "../utils/aiErrors";
 
 /**
  * Mood-based discovery: tagged moods/themes first, then embedding search.
@@ -29,7 +30,6 @@ export async function moodSearch(req: Request, res: Response) {
     const vector = await createEmbedding(`Urdu poetry about ${mood}`);
     return res.json(await nearest(vector, 10));
   } catch (err) {
-    console.error("moodSearch error:", err);
-    return res.status(500).json({error: "Mood search failed"});
+    return sendError(res, err, "Mood search");
   }
 }

@@ -1,147 +1,68 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import Page, { ErrorNote } from "../../components/ui/Page";
+import SherCard, { EmptyState, Skeleton } from "../../components/SherCard";
 import { fetchHistory } from "../../services/functions.service";
+import type { Sher } from "../../lib/http";
 
-type HistoryItem = {
+type Item = {
   id: string;
+  cacheHash?: string;
   text?: string;
   devanagariText?: string;
-  cacheHash?: string;
-  createdAt: any;
+  tashreeh?: unknown;
   explanation?: string;
-  tashreeh?: string;
   poet?: string;
-  ocrConfidence?: number;
-  attributionConfidence?: number;
+  createdAt?: { seconds?: number };
 };
 
-function formatDate(createdAt: any) {
-  if (!createdAt) return "—";
-
-  if (createdAt?.seconds) {
-    return new Date(createdAt.seconds * 1000).toLocaleString();
-  }
-
-  return new Date(createdAt).toLocaleString();
+function day(ts?: { seconds?: number }) {
+  if (!ts?.seconds) return "Earlier";
+  return new Date(ts.seconds * 1000).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 }
 
 export default function HistoryPage() {
-  const [items, setItems] = useState<HistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchHistory()
-      .then(setItems)
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Failed to load history")
-      )
-      .finally(() => setLoading(false));
+      .then((list) => setItems(list as Item[]))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load history"));
   }, []);
 
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen p-6 bg-cover bg-no-repeat bg-center"
-        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
-      >
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-        >
-          <span className="text-lg">←</span>
-          <span>Back to Home</span>
-        </button>
-        <p className="text-[#94725a]">Loading history…</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        className="min-h-screen p-6 bg-cover bg-no-repeat bg-center"
-        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
-      >
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-        >
-          <span className="text-lg">←</span>
-          <span>Back to Home</span>
-        </button>
-        <p className="text-red-500">Error loading history: {error}</p>
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div
-        className="min-h-screen p-6 bg-cover bg-no-repeat bg-center"
-        style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
-      >
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-        >
-          <span className="text-lg">←</span>
-          <span>Back to Home</span>
-        </button>
-        <p className="text-[#94725a]">
-          No scans yet. Scan poetry to build your history.
-        </p>
-      </div>
-    );
+  // group by day
+  const groups = new Map<string, Item[]>();
+  for (const it of items ?? []) {
+    const k = day(it.createdAt);
+    groups.set(k, [...(groups.get(k) ?? []), it]);
   }
 
   return (
-    <div
-      className="min-h-screen w-full overflow-x-hidden overflow-y-auto bg-cover bg-no-repeat bg-center"
-      style={{backgroundImage: "url('/images/background-pattern-soft.png')"}}
-    >
-      <div className="p-6 max-w-4xl mx-auto space-y-4 w-full min-w-0 box-border">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-        >
-          <span className="text-lg">←</span>
-          <span>Back to Home</span>
-        </button>
-        <h1 className="text-2xl font-semibold mb-4 text-[#3b2419]">Scan History</h1>
-
-        {items.map((item) => (
-          <div
-            key={item.id}
-            onClick={() =>
-              navigate("/reader", {
-                state: {
-                  text: item.devanagariText ?? item.text ?? "",
-                  poet: item.poet ?? "",
-                  explanation: item.explanation ?? item.tashreeh ?? "",
-                  ocrConfidence: item.ocrConfidence,
-                  attributionConfidence: item.attributionConfidence,
-                  cacheHash: item.cacheHash,
-                },
-              })
-            }
-            className="p-4 rounded-xl bg-[#fff7ef] border border-[#e2c9ad] cursor-pointer hover:border-[#c26a3b] hover:bg-[#f6e2cf] transition w-full min-w-0 overflow-hidden"
-          >
-            <p className="text-[#3b2419] whitespace-pre-wrap line-clamp-4 break-words min-w-0">
-              {item.text || item.cacheHash || item.id}
-            </p>
-
-            <div className="mt-2 text-sm text-[#94725a]">
-              {formatDate(item.createdAt)}
-            </div>
+    <Page title="History" subtitle="Every sher you've scanned and saved.">
+      {error && <ErrorNote>{error}</ErrorNote>}
+      {!items && !error && <Skeleton />}
+      {items && items.length === 0 && (
+        <EmptyState title="Nothing saved yet">
+          <Link to="/scan" className="underline">Scan a sher</Link> and tap “Save to history”.
+        </EmptyState>
+      )}
+      {[...groups.entries()].map(([d, list]) => (
+        <section key={d} className="mb-8">
+          <h2 className="mb-3 text-xs uppercase tracking-[0.25em] text-[#b08a6a]">{d}</h2>
+          <div className="space-y-3">
+            {list.map((it) => {
+              const sher: Sher = {
+                id: it.cacheHash || it.id,
+                devanagariText: it.devanagariText ?? it.text,
+                tashreeh: it.tashreeh ?? it.explanation,
+                poet: it.poet,
+              };
+              return <SherCard key={it.id} sher={sher} />;
+            })}
           </div>
-        ))}
-      </div>
-    </div>
+        </section>
+      ))}
+    </Page>
   );
 }

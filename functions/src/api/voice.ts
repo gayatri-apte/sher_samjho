@@ -12,6 +12,7 @@ import {
 import {addWordsToDeck} from "./vocabulary";
 import {updateUserStats} from "../utils/updateUserStats";
 import {incrementStat} from "../utils/updateAnalytics";
+import {sendError} from "../utils/aiErrors";
 import {createEmbedding} from "../utils/embedding";
 import {nearest} from "../utils/corpus";
 
@@ -48,18 +49,7 @@ function readAudio(body: AudioIn): Part | string {
  * @param {string} what - Feature name for logs
  */
 async function fail(res: Response, err: unknown, what: string) {
-  const msg = err instanceof Error ? err.message : String(err);
-  console.error(`${what} error:`, err);
-  await incrementStat("aiFailures").catch(() => undefined);
-  if (msg.includes("GEMINI_API_KEY")) {
-    res.status(503).json({error: "AI service not configured."});
-    return;
-  }
-  if (msg.startsWith("Gemini:")) {
-    res.status(502).json({error: msg.replace(/^Gemini: /, "")});
-    return;
-  }
-  res.status(500).json({error: `${what} failed. Please try again.`});
+  await sendError(res, err, what);
 }
 
 export type WordVerdict = {

@@ -1,0 +1,18 @@
+export const POETS = [
+  { name: "Mir Taqi Mir", years: "1723–1810", urdu: "میر تقی میر", era: "18th century",
+    note: "Khuda-e-sukhan — the 'god of poetry'. Simple words, bottomless sorrow." },
+  { name: "Khwaja Mir Dard", years: "1721–1785", urdu: "خواجہ میر درد", era: "18th century",
+    note: "The Sufi voice of Delhi: brief, mystical, quietly devastating." },
+  { name: "Mirza Ghalib", years: "1797–1869", urdu: "مرزا غالب", era: "Late Mughal",
+    note: "Wit, doubt and longing. The most quoted poet of the language." },
+  { name: "Sheikh Ibrahim Zauq", years: "1790–1854", urdu: "ابراہیم ذوق", era: "Late Mughal",
+    note: "Poet laureate of the Mughal court and Ghalib's great rival." },
+  { name: "Momin Khan Momin", years: "1800–1851", urdu: "مومن خان مومن", era: "Late Mughal",
+    note: "Ghalib offered his whole diwan for one of Momin's shers." },
+  { name: "Bahadur Shah Zafar", years: "1775–1862", urdu: "بہادر شاہ ظفر", era: "Late Mughal",
+    note: "The last Mughal emperor, who wrote of exile from Rangoon." },
+  { name: "Daagh Dehlvi", years: "1831–1905", urdu: "داغ دہلوی", era: "Late Mughal",
+    note: "Playful, conversational ghazals — the idiom of everyday Delhi." },
+  { name: "Allama Iqbal", years: "1877–1938", urdu: "علامہ اقبال", era: "20th century",
+    note: "Philosopher-poet of khudi (selfhood) and awakening." },
+];

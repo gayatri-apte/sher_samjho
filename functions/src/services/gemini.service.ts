@@ -30,7 +30,76 @@ export function getGenAI(): GoogleGenerativeAI {
  * @return {string} Model name
  */
 export function modelName(): string {
-  return process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  return process.env.GEMINI_MODEL || "gemini-3.8-flash";
+}
+
+let thinkingSupported = true;
+
+/**
+ * Generation config shared by every call. Gemini 3.x Flash thinks at
+ * MEDIUM by default, which made answers take 25–70 s. LOW is plenty for
+ * explanation / matching tasks and is several times faster.
+ * Override with GEMINI_THINKING=low|medium|high|off in functions/.env.
+ * @param {object} extra - Extra generationConfig fields
+ * @return {object} generationConfig
+ */
+export function genConfig(
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const level = (process.env.GEMINI_THINKING || "low").toLowerCase();
+  if (!thinkingSupported || level === "off") return {...extra};
+  return {...extra, thinkingConfig: {thinkingLevel: level}};
+}
+
+/**
+ * Builds a model with our generation config (thinking level etc.).
+ * @param {object} extra - Extra generationConfig fields
+ * @return {GenerativeModel} Model
+ */
+export function getModel(extra: Record<string, unknown> = {}) {
+  return getGenAI().getGenerativeModel({
+    model: modelName(),
+    generationConfig: genConfig(extra) as never,
+  });
+}
+
+/**
+ * Retries transient Gemini failures (503 high demand, 429 rate limit,
+ * 500/504, network resets) with exponential backoff, so a momentary
+ * overload during a demo doesn't surface as an error. If the model rejects
+ * our thinkingConfig (400), thinking is switched off and the call retried.
+ * @param {Function} fn - Call to attempt (must rebuild the model inside)
+ * @param {number} attempts - Max attempts
+ * @return {Promise<T>} Result of fn
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts = 4,
+): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      last = err;
+      const m = String(err instanceof Error ? err.message : err)
+        .toLowerCase();
+      if (thinkingSupported && m.includes("[400") && m.includes("thinking")) {
+        console.warn("thinkingConfig rejected by model; retrying without it");
+        thinkingSupported = false;
+        continue;
+      }
+      const transient = new RegExp(
+        "\\[(429|500|503|504)|unavailable|high demand|overloaded|" +
+        "econnreset|etimedout|fetch failed",
+      ).test(m);
+      if (!transient || i === attempts - 1) throw err;
+      const wait = 800 * 2 ** i + Math.floor(Math.random() * 400);
+      console.warn(`Gemini transient error, retry ${i + 1} in ${wait}ms`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw last;
 }
 
 const SAFETY_FINISH_REASONS = [
@@ -83,8 +152,7 @@ function readText(resp: RawResponse): string {
  * @return {Promise<string>} The generated text response
  */
 export async function generateText(prompt: string): Promise<string> {
-  const model = getGenAI().getGenerativeModel({model: modelName()});
-  const result = await model.generateContent(prompt);
+  const result = await withRetry(() => getModel().generateContent(prompt));
   return readText(result.response as unknown as RawResponse);
 }
 
@@ -111,16 +179,12 @@ export async function generateJSON<T>(
   schema: ResponseSchema,
   temperature = 0.2,
 ): Promise<T> {
-  const model = getGenAI().getGenerativeModel({
-    model: modelName(),
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: schema,
-      temperature,
-    },
-  });
   const content = parts.map((p) => (typeof p === "string" ? {text: p} : p));
-  const result = await model.generateContent(content);
+  const result = await withRetry(() => getModel({
+    responseMimeType: "application/json",
+    responseSchema: schema,
+    temperature,
+  }).generateContent(content));
   const text = readText(result.response as unknown as RawResponse);
   try {
     return JSON.parse(text) as T;

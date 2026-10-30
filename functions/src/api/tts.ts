@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
 import {generateSpeech} from "../utils/tts";
+import {sendError} from "../utils/aiErrors";
 
 /**
  * Returns synthesized MP3 audio.
@@ -28,7 +29,6 @@ export async function ttsHandler(req: Request, res: Response) {
     });
     res.send(audio);
   } catch (err) {
-    console.error("TTS error:", err);
-    res.status(500).json({error: "Text-to-speech failed"});
+    await sendError(res, err, "Text-to-speech");
   }
 }

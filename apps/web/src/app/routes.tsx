@@ -1,4 +1,5 @@
 import { lazy, type ReactNode } from "react";
+import { Navigate } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 const HistoryPage = lazy(() => import("../pages/history/HistoryPage"));
 const HistoryDetailPage = lazy(() => import("../pages/history/HistoryDetailPage"));
@@ -9,7 +10,6 @@ const DiscoverPage = lazy(() => import("../pages/discover/DiscoverPage"));
 const EraExplorerPage = lazy(() => import("../pages/explorer/EraExplorerPage"));
 const PoetExplorer = lazy(() => import("./explorer/PoetExplorer"));
 const PoetDetails = lazy(() => import("./explorer/PoetDetails"));
-const ThemeExplorer = lazy(() => import("./explorer/ThemeExplorer"));
 const DailyFeed = lazy(() => import("./feed/DailyFeed"));
 const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
 const PoetryAIPage = lazy(() => import("./poetry-ai/PoetryAIPage"));
@@ -117,7 +117,7 @@ const routes: AppRoute[] = [
   },
   {
     path: "/explorer/themes",
-    element: <ThemeExplorer />,
+    element: <Navigate to="/discover" replace />,
   },
   {
     path: "/admin",

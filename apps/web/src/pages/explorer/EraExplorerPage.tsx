@@ -1,18 +1,17 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Page, { Card, ErrorNote } from "../../components/ui/Page";
+import Page, { ErrorNote } from "../../components/ui/Page";
+import SherCard, { EmptyState, Skeleton } from "../../components/SherCard";
 import { api } from "../../config/api";
-import { apiJSON, sherState, type Sher } from "../../lib/http";
+import { apiJSON, type Sher } from "../../lib/http";
 
 // Must match the era labels written by functions/src/utils/poetMeta.ts
 const ERAS = [
   { value: "18th Century", label: "18th century", note: "Mir Taqi Mir and the Delhi masters" },
   { value: "Mughal Era", label: "Late Mughal", note: "Ghalib and the twilight of Delhi" },
-  { value: "Progressive", label: "Progressive", note: "Faiz and the Progressive Writers" },
+  { value: "20th Century", label: "20th century", note: "Iqbal and the poetry of awakening" },
 ];
 
 export default function EraExplorerPage() {
-  const navigate = useNavigate();
   const [era, setEra] = useState<string | null>(null);
   const [results, setResults] = useState<Sher[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,20 +51,12 @@ export default function EraExplorerPage() {
       </div>
 
       {error && <ErrorNote>{error}</ErrorNote>}
-      {loading && <p className="mt-6 text-[#94725a]">Loading…</p>}
-      {!loading && era && results.length === 0 && !error && (
-        <p className="mt-6 text-[#94725a]">No shers saved from this era yet.</p>
-      )}
-
       <div className="mt-6 space-y-3">
-        {results.map((r) => (
-          <Card key={r.id} className="!p-4 cursor-pointer hover:bg-[#f6e2cf]">
-            <button type="button" className="w-full text-left" onClick={() => navigate(`/poetry-ai/${r.id}`, { state: sherState(r) })}>
-              {r.poet && <div className="text-xs text-[#94725a] mb-1">{r.poet}</div>}
-              <div className="font-deva text-lg whitespace-pre-line">{r.devanagariText}</div>
-            </button>
-          </Card>
-        ))}
+        {loading && <Skeleton />}
+        {!loading && era && results.length === 0 && !error && (
+          <EmptyState title="No shers from this era in the library yet">Scan one, or load the classic library from Admin.</EmptyState>
+        )}
+        {!loading && results.map((r) => <SherCard key={r.id} sher={r} />)}
       </div>
     </Page>
   );

@@ -1,4 +1,4 @@
-import {getGenAI} from "../services/gemini.service.js";
+import {getGenAI, withRetry} from "../services/gemini.service.js";
 
 const EMBEDDING_MODEL = "gemini-embedding-001";
 
@@ -10,6 +10,6 @@ const EMBEDDING_MODEL = "gemini-embedding-001";
 export async function createEmbedding(text: string): Promise<number[]> {
   const genAI = getGenAI();
   const model = genAI.getGenerativeModel({model: EMBEDDING_MODEL});
-  const result = await model.embedContent(text);
+  const result = await withRetry(() => model.embedContent(text));
   return result.embedding.values;
 }

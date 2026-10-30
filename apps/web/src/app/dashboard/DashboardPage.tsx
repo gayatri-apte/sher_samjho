@@ -1,10 +1,12 @@
-import {useEffect, useState} from "react";
-import {doc, getDoc} from "firebase/firestore";
-import {getAuth} from "firebase/auth";
-import {useNavigate} from "react-router-dom";
-import {db} from "../../services/firebase";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { Flame, ScanLine, Mic2, Trophy, BookMarked, Repeat } from "lucide-react";
+import Page, { Card, ErrorNote } from "../../components/ui/Page";
+import { Skeleton } from "../../components/SherCard";
+import { auth, db } from "../../services/firebase";
 
-type UserStats = {
+type Stats = {
   currentStreak?: number;
   longestStreak?: number;
   totalReviews?: number;
@@ -14,125 +16,55 @@ type UserStats = {
 };
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<UserStats>({});
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const auth = getAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+    auth.authStateReady().then(async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return setStats({});
       try {
-        const uid = auth.currentUser?.uid;
-        if (!uid) {
-          setLoading(false);
-          return;
-        }
         const snap = await getDoc(doc(db, "users", uid));
-        if (!cancelled) {
-          setStats((snap.data() as UserStats) || {});
-        }
+        setStats((snap.data() as Stats) || {});
       } catch {
-        if (!cancelled) {
-          setError("Could not load your study stats.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setError("Could not load your progress.");
       }
-    }
+    });
+  }, []);
 
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [auth]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f8eee3] text-[#3b2419] p-8 flex items-center justify-center">
-        <div>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-          >
-            <span className="text-lg">←</span>
-            <span>Back to Home</span>
-          </button>
-          <p className="text-[#94725a]">Loading your study insights…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#f8eee3] text-[#3b2419] p-8 flex items-center justify-center">
-        <div>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-          >
-            <span className="text-lg">←</span>
-            <span>Back to Home</span>
-          </button>
-          <p className="text-amber-700" role="alert">
-            {error}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const tiles = [
+    { icon: <Flame />, label: "Current streak", value: `${stats?.currentStreak ?? 0} days` },
+    { icon: <Trophy />, label: "Longest streak", value: `${stats?.longestStreak ?? 0} days` },
+    { icon: <Mic2 />, label: "Recitations with Ustad", value: stats?.totalRecitations ?? 0 },
+    { icon: <Trophy />, label: "Best recitation", value: `${stats?.bestRecitationScore ?? 0}/100` },
+    { icon: <ScanLine />, label: "Shers scanned", value: stats?.totalScans ?? 0 },
+    { icon: <Repeat />, label: "Word reviews", value: stats?.totalReviews ?? 0 },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#f8eee3] text-[#3b2419] p-8">
-      <button
-        type="button"
-        onClick={() => navigate("/")}
-        className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-      >
-        <span className="text-lg">←</span>
-        <span>Back to Home</span>
-      </button>
-      <h1 className="text-3xl mb-6">Your Study Insights</h1>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
-          <p className="text-sm text-[#94725a] mb-1">Current Streak</p>
-          <h2 className="text-2xl">{stats.currentStreak || 0}</h2>
+    <Page title="My progress" subtitle="Your practice at a glance.">
+      {error && <ErrorNote>{error}</ErrorNote>}
+      {!stats && !error ? (
+        <Skeleton rows={2} />
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {tiles.map((t) => (
+            <Card key={t.label} className="!p-5">
+              <div className="text-[#c26a3b]">{t.icon}</div>
+              <div className="mt-3 text-2xl font-bold tabular-nums text-[#5a2e14]">{t.value}</div>
+              <div className="text-sm text-[#94725a]">{t.label}</div>
+            </Card>
+          ))}
         </div>
-
-        <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
-          <p className="text-sm text-[#94725a] mb-1">Longest Streak</p>
-          <h2 className="text-2xl">{stats.longestStreak || 0}</h2>
-        </div>
-
-        <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
-          <p className="text-sm text-[#94725a] mb-1">Total Reviews</p>
-          <h2 className="text-2xl">{stats.totalReviews || 0}</h2>
-        </div>
-
-        <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
-          <p className="text-sm text-[#94725a] mb-1">Total Scans</p>
-          <h2 className="text-2xl">{stats.totalScans || 0}</h2>
-        </div>
-
-        <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
-          <p className="text-sm text-[#94725a] mb-1">Recitations with Ustad</p>
-          <h2 className="text-2xl">{stats.totalRecitations || 0}</h2>
-        </div>
-
-        <div className="bg-[#fff7ef] border border-[#e2c9ad] p-6 rounded-xl shadow-sm">
-          <p className="text-sm text-[#94725a] mb-1">Best recitation score</p>
-          <h2 className="text-2xl">{stats.bestRecitationScore || 0}<span className="text-sm text-[#94725a]">/100</span></h2>
-        </div>
+      )}
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link to="/ustad" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#c26a3b] text-white font-medium hover:bg-[#a9552a]">
+          <Mic2 size={16} /> Practise today's sher
+        </Link>
+        <Link to="/vocabulary" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#e2c9ad] text-[#5a321c] hover:bg-[#f6e2cf]">
+          <BookMarked size={16} /> Review my deck
+        </Link>
       </div>
-    </div>
+    </Page>
   );
 }
-

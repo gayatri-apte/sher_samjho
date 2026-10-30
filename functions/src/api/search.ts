@@ -1,6 +1,7 @@
 import type {Request, Response} from "express";
 import {createEmbedding} from "../utils/embedding.js";
 import {nearest} from "../utils/corpus";
+import {sendError} from "../utils/aiErrors";
 
 /**
  * Semantic search over the global poetry cache (meaning-based).
@@ -19,7 +20,6 @@ export async function semanticSearch(req: Request, res: Response) {
     const vector = await createEmbedding(query);
     return res.json(await nearest(vector, limit, undefined, 0.3));
   } catch (err) {
-    console.error("semanticSearch error:", err);
-    return res.status(500).json({error: "Search failed"});
+    return sendError(res, err, "Search");
   }
 }

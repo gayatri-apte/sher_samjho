@@ -1,7 +1,8 @@
 import type {Request, Response} from "express";
 import * as admin from "firebase-admin";
-import {getGenAI, modelName} from "../services/gemini.service";
+import {getModel, withRetry} from "../services/gemini.service";
 import {incrementStat} from "../utils/updateAnalytics";
+import {sendError} from "../utils/aiErrors";
 
 const SAFETY_FINISH_REASONS = [
   "SAFETY",
@@ -61,8 +62,6 @@ export async function poetryChat(req: Request, res: Response): Promise<void> {
         "including meter and context.",
     };
 
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({model: modelName()});
     const convo = Array.isArray(history) ?
       history.slice(-6).map((m) =>
         `${m.role === "ai" ? "You" : "User"}: ${String(m.text).slice(0, 600)}`
@@ -115,7 +114,7 @@ Rules:
 ${intertextualInstruction}
 `;
 
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => getModel().generateContent(prompt));
     const resp = result.response as unknown as {
       promptFeedback?: { blockReason?: string; blockReasonMessage?: string };
       candidates?: Array<{
@@ -163,26 +162,6 @@ ${intertextualInstruction}
         "exist.",
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("poetryChat error:", err);
-
-    await incrementStat("aiFailures");
-
-    if (message.includes("GEMINI_API_KEY not set")) {
-      res.status(503).json({
-        error:
-          "AI service not configured. Set GEMINI_API_KEY in functions/.env.",
-      });
-      return;
-    }
-    if (message.includes("Gemini:")) {
-      res.status(502).json({error: message.replace(/^Gemini: /, "")});
-      return;
-    }
-
-    res.status(500).json({
-      error: "AI failed",
-      detail: process.env.NODE_ENV === "development" ? message : undefined,
-    });
+    await sendError(res, err, "Poetry AI");
   }
 }

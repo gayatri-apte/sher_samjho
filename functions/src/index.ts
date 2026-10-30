@@ -41,7 +41,12 @@ import {
   findSherHandler,
   baitBaziHandler,
 } from "./api/voice";
-import {getSherHandler, dailySherHandler} from "./api/sher";
+import {
+  getSherHandler,
+  dailySherHandler,
+  poetShersHandler,
+} from "./api/sher";
+import {seedClassicsHandler} from "./api/seed";
 
 admin.initializeApp();
 
@@ -106,6 +111,7 @@ app.post("/search/era", eraSearch);
 app.post("/similar", similarSher);
 app.get("/sher/:id", getSherHandler);
 app.get("/feed/daily", dailySherHandler);
+app.get("/poet/:name", poetShersHandler);
 
 // --- Poetry AI ---
 app.post("/poetry-chat", aiLight, poetryChat);
@@ -123,6 +129,7 @@ app.get("/official-recitations/:sherId", getOfficialRecitations);
 // --- Community + admin ---
 app.get("/leaderboard", leaderboard);
 app.get("/admin-analytics", requireAuth, requireAdmin, adminAnalytics);
+app.post("/admin/seed", requireAuth, requireAdmin, seedClassicsHandler);
 
 app.get("/health", (_req, res) => {
   res.json({ok: true, gemini: !!process.env.GEMINI_API_KEY});

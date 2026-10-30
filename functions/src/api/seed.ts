@@ -1,0 +1,66 @@
+import type {Request, Response} from "express";
+import {getFirestore, FieldValue} from "firebase-admin/firestore";
+import {CLASSICS} from "../data/classics";
+import {createHash} from "../utils/hash";
+import {createEmbedding} from "../utils/embedding";
+import {generateKeywords} from "../utils/keywords";
+import {getEraFromPoet, getMovementFromPoet} from "../utils/poetMeta";
+import {generateTashreehLevels} from "./tashreeh";
+import {invalidateCorpus} from "../utils/corpus";
+import {sendError} from "../utils/aiErrors";
+
+const PER_CALL = 4; // keeps each call well inside the 180 s timeout
+
+/**
+ * POST /admin/seed — adds the starter library of classic shers.
+ * Idempotent: skips ones already present, does up to 5 per call, and
+ * reports how many remain so the admin page can call it again.
+ * @param {Request} _req - Express request
+ * @param {Response} res - Express response
+ */
+export async function seedClassicsHandler(_req: Request, res: Response) {
+  try {
+    const col = getFirestore().collection("global_poetry_cache");
+    const missing = [];
+    for (const c of CLASSICS) {
+      const id = createHash(c.devanagari);
+      const snap = await col.doc(id).get();
+      if (!snap.exists || !snap.data()?.embedding) missing.push({id, c});
+    }
+
+    const batch = missing.slice(0, PER_CALL);
+    await Promise.all(batch.map(async ({id, c}) => {
+      const [embedding, tashreeh] = await Promise.all([
+        createEmbedding(`${c.devanagari}\n${c.roman}\n${c.themes.join(" ")}`),
+        generateTashreehLevels(c.devanagari),
+      ]);
+      await col.doc(id).set({
+        devanagariText: c.devanagari,
+        romanText: c.roman,
+        script: "devanagari",
+        poet: c.poet,
+        era: getEraFromPoet(c.poet),
+        movement: getMovementFromPoet(c.poet),
+        themes: c.themes,
+        keywords: generateKeywords(`${c.devanagari} ${c.roman}`),
+        embedding,
+        tashreeh,
+        source: "Classic library",
+        attributionConfidence: 1,
+        aiGenerated: false,
+        hitCount: 0,
+        textHash: id,
+        createdAt: FieldValue.serverTimestamp(),
+      }, {merge: true});
+    }));
+
+    invalidateCorpus();
+    res.json({
+      added: batch.length,
+      remaining: missing.length - batch.length,
+      total: CLASSICS.length,
+    });
+  } catch (err) {
+    await sendError(res, err, "Seeding");
+  }
+}

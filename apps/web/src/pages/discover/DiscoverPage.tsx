@@ -1,114 +1,68 @@
-import {useState} from "react";
-import {useNavigate} from "react-router-dom";
-import {api} from "../../config/api";
+import { useState } from "react";
+import Page, { ErrorNote } from "../../components/ui/Page";
+import SherCard, { EmptyState, Skeleton } from "../../components/SherCard";
+import { api } from "../../config/api";
+import { apiJSON, type Sher } from "../../lib/http";
+
+const MOODS = [
+  { id: "love", label: "Ishq", sub: "love", emoji: "🌹" },
+  { id: "longing", label: "Intezaar", sub: "longing", emoji: "🕯️" },
+  { id: "sorrow", label: "Gham", sub: "sorrow", emoji: "🌧️" },
+  { id: "wit", label: "Shokhi", sub: "wit", emoji: "✨" },
+  { id: "spiritual", label: "Rooh", sub: "spiritual", emoji: "🌙" },
+  { id: "philosophy", label: "Falsafa", sub: "philosophy", emoji: "🪶" },
+  { id: "hope", label: "Umeed", sub: "hope", emoji: "🌅" },
+  { id: "rebellion", label: "Inquilab", sub: "rebellion", emoji: "🔥" },
+];
 
 export default function DiscoverPage() {
-  const [results, setResults] = useState<{devanagariText?: string; tashreeh?: string}[]>([]);
+  const [mood, setMood] = useState<string | null>(null);
+  const [results, setResults] = useState<Sher[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
-  async function searchMood(mood: string) {
+  async function pick(id: string) {
+    setMood(id);
+    setLoading(true);
+    setError(null);
     try {
-      setError(null);
-      setLoading(true);
-      const res = await fetch(api.moodSearch, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({mood}),
-      });
-      if (!res.ok) {
-        throw new Error("Could not load moods. Please try again.");
-      }
-      const data = await res.json();
-      if (!Array.isArray(data)) {
-        throw new Error("Unexpected response from server.");
-      }
-      setResults(data);
-    } catch (err) {
-      console.error("Mood search failed", err);
+      setResults(await apiJSON<Sher[]>(api.moodSearch, { body: { mood: id } }));
+    } catch (e) {
       setResults([]);
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(e instanceof Error ? e.message : "Could not load this mood");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div
-      className="min-h-screen px-4 py-8 flex justify-center bg-cover bg-no-repeat bg-top"
-      style={{backgroundImage: "url('/images/background-lanterns.png')"}}
-    >
-      <div className="mt-12 w-full max-w-3xl rounded-2xl border border-[#e2c9ad] bg-[#fff7ef]/95 shadow-xl p-6 sm:p-8">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mb-4 inline-flex items-center gap-2 text-sm text-[#c26a3b] hover:text-[#a9552a]"
-        >
-          <span className="text-lg">←</span>
-          <span>Back to Home</span>
-        </button>
-        <h1 className="text-3xl font-semibold text-[#3b2419] mb-2">
-          Discover by Mood
-        </h1>
-        <p className="text-sm text-[#94725a] mb-6">
-          Tap a mood to explore shers that feel like it.
-        </p>
-
-        <div className="flex flex-wrap gap-3 mb-6">
+    <Page title="Discover" subtitle="How are you feeling? Pick a mood and we'll find shers that feel like it.">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {MOODS.map((m) => (
           <button
-            onClick={() => searchMood("love")}
-            className="px-4 py-2 rounded-xl bg-[#d94a7a] hover:bg-[#c03c69] text-white text-sm font-medium shadow-sm"
+            key={m.id}
+            type="button"
+            onClick={() => pick(m.id)}
+            aria-pressed={mood === m.id}
+            className={`rounded-2xl border p-4 text-left transition-colors ${
+              mood === m.id ? "bg-[#5a2e14] text-[#fff3e4] border-transparent" : "bg-[#fff8f0] border-[#ecd6bd] hover:bg-[#f6e2cf]"
+            }`}
           >
-            Love
+            <span className="text-2xl" aria-hidden>{m.emoji}</span>
+            <div className="mt-2 font-semibold">{m.label}</div>
+            <div className={`text-xs ${mood === m.id ? "text-[#e9c9a8]" : "text-[#94725a]"}`}>{m.sub}</div>
           </button>
-          <button
-            onClick={() => searchMood("longing")}
-            className="px-4 py-2 rounded-xl bg-[#3b6ed6] hover:bg-[#305cc0] text-white text-sm font-medium shadow-sm"
-          >
-            Longing
-          </button>
-          <button
-            onClick={() => searchMood("rebellion")}
-            className="px-4 py-2 rounded-xl bg-[#d7443b] hover:bg-[#c2362e] text-white text-sm font-medium shadow-sm"
-          >
-            Rebellion
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 rounded-xl border border-[#e7b4b4] bg-[#ffecec] px-4 py-3 text-sm text-[#a13b3b]">
-            {error}
-          </div>
-        )}
-
-        {loading && (
-          <p className="text-sm text-[#94725a] mb-4">Finding shers for this mood…</p>
-        )}
-
-        <div className="space-y-3">
-          {results.map((r, i) => (
-            <button
-              key={i}
-              type="button"
-              className="w-full text-left rounded-2xl border border-[#e2c9ad] bg-[#fdf3e8] hover:bg-[#f7ebde] px-4 py-3 text-[#3b2419] text-sm leading-relaxed shadow-sm"
-              onClick={() =>
-                navigate("/reader", {
-                  state: {text: r.devanagariText, explanation: r.tashreeh},
-                })
-              }
-            >
-              {r.devanagariText || "Untitled sher"}
-            </button>
-          ))}
-
-          {!loading && !error && results.length === 0 && (
-            <p className="text-sm text-[#94725a]">
-              No shers yet. Try picking a mood above.
-            </p>
-          )}
-        </div>
+        ))}
       </div>
-    </div>
+
+      <div className="mt-8 space-y-3">
+        {error && <ErrorNote>{error}</ErrorNote>}
+        {loading && <Skeleton />}
+        {!loading && mood && !error && results.length === 0 && (
+          <EmptyState title="Nothing for this mood yet">Scan a few shers and they'll show up here.</EmptyState>
+        )}
+        {!loading && results.map((s) => <SherCard key={s.id} sher={s} />)}
+      </div>
+    </Page>
   );
 }

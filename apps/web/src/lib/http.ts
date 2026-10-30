@@ -6,22 +6,38 @@ import { auth } from "../services/firebase";
  */
 export async function apiJSON<T>(
   url: string,
-  opts: { method?: string; body?: unknown; requireAuth?: boolean } = {},
+  opts: { method?: string; body?: unknown; requireAuth?: boolean; timeoutMs?: number } = {},
 ): Promise<T> {
+  await Promise.race([auth.authStateReady(), new Promise((r) => setTimeout(r, 5000))]);
   const user = auth.currentUser;
   if (opts.requireAuth && !user) {
     throw new Error("Please sign in (guest is fine) to use this.");
   }
   const token = user ? await user.getIdToken() : null;
 
-  const res = await fetch(url, {
-    method: opts.method ?? (opts.body ? "POST" : "GET"),
-    headers: {
-      ...(opts.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
+  // Never leave the UI spinning forever (cold starts can take ~20 s).
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 120_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: opts.method ?? (opts.body ? "POST" : "GET"),
+      headers: {
+        ...(opts.body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    throw new Error(
+      (e as Error)?.name === "AbortError"
+        ? "The server took too long to answer. Please try again."
+        : "Network error — check your connection and try again.",
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {

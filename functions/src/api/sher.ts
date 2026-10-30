@@ -34,9 +34,12 @@ export async function getSherHandler(req: Request, res: Response) {
  */
 export async function dailySherHandler(req: Request, res: Response) {
   try {
-    const all = (await loadCorpus()).filter(
-      (e) => (e.data.devanagariText ?? e.data.text ?? "").trim(),
-    );
+    // Only real shers: skip empty scans and long prose pages that OCR
+    // picked up (e.g. a poet's biography paragraph).
+    const all = (await loadCorpus()).filter((e) => {
+      const t = String(e.data.devanagariText ?? e.data.text ?? "").trim();
+      return t.length > 10 && t.length <= 400 && t.split("\n").length <= 8;
+    });
     if (!all.length) return res.json(null);
 
     let idx: number;
@@ -56,5 +59,23 @@ export async function dailySherHandler(req: Request, res: Response) {
   } catch (err) {
     console.error("dailySher error:", err);
     return res.status(500).json({error: "Failed to load daily sher"});
+  }
+}
+
+/**
+ * GET /poet/:name — shers by one poet (public fields only).
+ * @param {Request} req - Express request
+ * @param {Response} res - Express response
+ */
+export async function poetShersHandler(req: Request, res: Response) {
+  try {
+    const name = String(req.params.name || "").trim();
+    if (!name) return res.status(400).json({error: "name required"});
+    const snap = await getFirestore().collection("global_poetry_cache")
+      .where("poet", "==", name).limit(30).get();
+    return res.json(snap.docs.map((d) => toPublicSher(d.id, d.data())));
+  } catch (err) {
+    console.error("poetShers error:", err);
+    return res.status(500).json({error: "Failed to load poet"});
   }
 }

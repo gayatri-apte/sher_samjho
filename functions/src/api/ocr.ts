@@ -10,6 +10,7 @@ import {
 } from "../utils/transliterate";
 import {generateTashreehLevels} from "./tashreeh";
 import {incrementStat} from "../utils/updateAnalytics";
+import {sendError} from "../utils/aiErrors";
 
 type CachedOCRData = {
   tashreeh?: string | import("./tashreeh").TashreehLevels;
@@ -147,17 +148,6 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
     res.json(result);
     return;
   } catch (error) {
-    console.error("OCR error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-
-    const errorDetails = error instanceof Error ? error.stack : String(error);
-    console.error("OCR error details:", errorDetails);
-    res.status(500).json({
-      error: "OCR failed",
-      message: errorMessage.startsWith("Gemini:") ?
-        errorMessage.replace(/^Gemini: /, "") :
-        "Could not read this image. Please try again.",
-    });
+    await sendError(res, error, "Scan");
   }
 }

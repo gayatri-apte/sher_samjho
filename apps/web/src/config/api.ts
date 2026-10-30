@@ -26,6 +26,8 @@ export const api = {
   similar: `${b}/similar`,
   sher: (id: string) => `${b}/sher/${encodeURIComponent(id)}`,
   dailySher: `${b}/feed/daily`,
+  poet: (name: string) => `${b}/poet/${encodeURIComponent(name)}`,
+  seed: `${b}/admin/seed`,
   poetryChat: `${b}/poetry-chat`,
   poetryComplete: `${b}/poetry-complete`,
   tts: `${b}/tts`,

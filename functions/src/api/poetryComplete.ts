@@ -1,5 +1,6 @@
 import type {Request, Response} from "express";
-import {getGenAI, modelName} from "../services/gemini.service";
+import {getModel, withRetry} from "../services/gemini.service";
+import {sendError} from "../utils/aiErrors";
 
 /**
  * Completes an Urdu sher in classical style. Output is clearly labeled as
@@ -24,8 +25,6 @@ export async function poetryComplete(
       return;
     }
 
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({model: modelName()});
 
     const prompt = `
 Complete this Urdu sher in classical style:
@@ -39,7 +38,7 @@ Rules:
 - Stay within culturally appropriate themes and imagery.
 `;
 
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => getModel().generateContent(prompt));
     const resp = result.response as unknown as {
       promptFeedback?: { blockReason?: string };
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -64,14 +63,6 @@ Rules:
       label: "AI-Generated Completion",
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("poetryComplete error:", err);
-    if (message.includes("GEMINI_API_KEY not set")) {
-      res.status(503).json({
-        error: "AI service not configured. Set GEMINI_API_KEY in .env.",
-      });
-      return;
-    }
-    res.status(500).json({error: "AI failed"});
+    await sendError(res, err, "Completion");
   }
 }
