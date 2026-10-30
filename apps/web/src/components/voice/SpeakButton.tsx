@@ -8,6 +8,8 @@ type Props = {
   slow?: boolean;
   compact?: boolean;
   className?: string;
+  /** Explanation language code (e.g. mr, te) so the right voice is used. */
+  lang?: string;
 };
 
 /** Plays text aloud via the backend TTS (normal or slow learner mode). */
@@ -17,6 +19,7 @@ export default function SpeakButton({
   slow = false,
   compact = false,
   className = "",
+  lang,
 }: Props) {
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
   const [err, setErr] = useState<string | null>(null);
@@ -25,7 +28,7 @@ export default function SpeakButton({
     setErr(null);
     setState("loading");
     try {
-      const p = speak(text, slow ? 0.6 : 0.9);
+      const p = speak(text, slow ? 0.6 : 0.9, lang);
       setState("playing");
       await p;
     } catch (e) {

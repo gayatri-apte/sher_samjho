@@ -50,8 +50,16 @@ export function describeError(
   if (m.includes("resource_exhausted") || m.includes("quota") ||
       m.includes("[429") || m.includes("[503") || m.includes("high demand") ||
       m.includes("unavailable")) {
+    if (m.includes("perday") || m.includes("per day") ||
+        m.includes("requests_per_day") || m.includes("daily")) {
+      return {status: 429, code: "AI_DAILY_QUOTA",
+        message: "Today's Gemini quota for this API key is used up. It " +
+          "resets at midnight Pacific time, or raise the limit / enable " +
+          "billing for the key's project at aistudio.google.com."};
+    }
     return {status: 429, code: "AI_QUOTA",
-      message: "The AI is busy (quota reached). Try again in a minute."};
+      message: "The AI is busy (per-minute limit reached). Wait about a " +
+        "minute and try again."};
   }
   if (m.includes("billing")) {
     return {status: 503, code: "BILLING",

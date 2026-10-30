@@ -9,6 +9,8 @@ import {
   transliterateToRoman,
 } from "../utils/transliterate";
 import {generateTashreehLevels} from "./tashreeh";
+import {beginnerTashreehPrompt} from "../prompts/tashreeh.beginner";
+import {generateText} from "../services/gemini.service";
 import {incrementStat} from "../utils/updateAnalytics";
 import {sendError} from "../utils/aiErrors";
 
@@ -116,18 +118,26 @@ export async function ocrHandler(req: Request, res: Response): Promise<void> {
     const script = detectScript(rawText);
     let devanagariText: string;
     let romanText: string;
+    let beginner: string;
 
+    // Only the beginner tashreeh is written now; intermediate and scholar
+    // are generated when the user opens them (POST /tashreeh with level).
+    // Fewer, parallel Gemini calls keep a first scan well under a minute
+    // and inside the per-minute quota.
     if (script === "devanagari") {
-      // Hindi: text is already Devanagari
       devanagariText = normalizeForDisplay(rawText);
-      romanText = await transliterateDevanagariToRoman(devanagariText);
+      [romanText, beginner] = await Promise.all([
+        transliterateDevanagariToRoman(devanagariText),
+        generateText(beginnerTashreehPrompt(devanagariText)),
+      ]);
     } else {
-      // Urdu: transliterate to Devanagari and Roman
-      devanagariText = await transliterateToDevanagari(rawText);
-      romanText = await transliterateToRoman(rawText);
+      [devanagariText, romanText] = await Promise.all([
+        transliterateToDevanagari(rawText),
+        transliterateToRoman(rawText),
+      ]);
+      beginner = await generateText(beginnerTashreehPrompt(devanagariText));
     }
-
-    const tashreeh = await generateTashreehLevels(devanagariText);
+    const tashreeh = {beginner, intermediate: "", scholar: ""};
 
     const result = {
       rawUrdu: rawText,

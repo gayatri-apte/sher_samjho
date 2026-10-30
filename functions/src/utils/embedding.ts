@@ -10,6 +10,6 @@ const EMBEDDING_MODEL = "gemini-embedding-001";
 export async function createEmbedding(text: string): Promise<number[]> {
   const genAI = getGenAI();
   const model = genAI.getGenerativeModel({model: EMBEDDING_MODEL});
-  const result = await withRetry(() => model.embedContent(text));
+  const result = await withRetry(() => model.embedContent(text), 4, false);
   return result.embedding.values;
 }

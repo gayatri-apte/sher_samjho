@@ -4,6 +4,8 @@ import {intermediateTashreehPrompt} from "../prompts/tashreeh.intermediate";
 import {scholarTashreehPrompt} from "../prompts/tashreeh.scholar";
 import {generateText} from "../services/gemini.service";
 import {sendError} from "../utils/aiErrors";
+import {getFirestore} from "firebase-admin/firestore";
+import {LANGUAGES, langTashreehPrompt} from "../prompts/tashreeh.lang";
 
 export type TashreehLevels = {
   beginner: string;
@@ -48,7 +50,9 @@ export async function generateTashreehLevels(
  */
 export async function tashreehHandler(req: Request, res: Response) {
   try {
-    const {text, level} = req.body as { text?: string; level?: string };
+    const {text, level: rawLevel, lang: rawLang, textHash} = req.body as {
+      text?: string; level?: string; lang?: string; textHash?: string;
+    };
 
     if (!text) {
       return res.status(400).json({error: "Text is required"});
@@ -57,20 +61,37 @@ export async function tashreehHandler(req: Request, res: Response) {
     const confidence = 0.85;
     const aiGenerated = true;
 
-    if (level === "beginner") {
-      const prompt = beginnerTashreehPrompt(text);
+    const prompts: Record<string, (t: string) => string> = {
+      beginner: beginnerTashreehPrompt,
+      intermediate: intermediateTashreehPrompt,
+      scholar: scholarTashreehPrompt,
+    };
+    const lang = rawLang && LANGUAGES[rawLang] ? rawLang : "hi";
+    const level = rawLevel && prompts[rawLevel] ? rawLevel :
+      (lang !== "hi" ? "beginner" : "");
+
+    if (level) {
+      // Explanations are cached on the sher: Hindi in tashreeh.<level>,
+      // other languages in tashreehLang.<lang>.<level>. A cached one is
+      // returned without calling the AI at all.
+      const field = lang === "hi" ?
+        `tashreeh.${level}` : `tashreehLang.${lang}.${level}`;
+      const hash = String(textHash || "");
+      const ref = /^[a-f0-9]{64}$/.test(hash) ?
+        getFirestore().collection("global_poetry_cache").doc(hash) : null;
+      if (ref) {
+        const snap = await ref.get().catch(() => null);
+        const hit = snap?.exists ? snap.get(field) : null;
+        if (typeof hit === "string" && hit.trim()) {
+          return res.json({explanation: hit, lang, level, cached: true,
+            confidence, aiGenerated});
+        }
+      }
+      const prompt = lang === "hi" ?
+        prompts[level](text) : langTashreehPrompt(text, level, lang);
       const explanation = await generateText(prompt);
-      return res.json({explanation, confidence, aiGenerated});
-    }
-    if (level === "scholar") {
-      const prompt = scholarTashreehPrompt(text);
-      const explanation = await generateText(prompt);
-      return res.json({explanation, confidence, aiGenerated});
-    }
-    if (level === "intermediate") {
-      const prompt = intermediateTashreehPrompt(text);
-      const explanation = await generateText(prompt);
-      return res.json({explanation, confidence, aiGenerated});
+      if (ref) await ref.update({[field]: explanation}).catch(() => undefined);
+      return res.json({explanation, lang, level, confidence, aiGenerated});
     }
 
     const levels = await generateTashreehLevels(text);

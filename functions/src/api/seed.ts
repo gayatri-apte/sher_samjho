@@ -5,7 +5,8 @@ import {createHash} from "../utils/hash";
 import {createEmbedding} from "../utils/embedding";
 import {generateKeywords} from "../utils/keywords";
 import {getEraFromPoet, getMovementFromPoet} from "../utils/poetMeta";
-import {generateTashreehLevels} from "./tashreeh";
+import {beginnerTashreehPrompt} from "../prompts/tashreeh.beginner";
+import {generateText} from "../services/gemini.service";
 import {invalidateCorpus} from "../utils/corpus";
 import {sendError} from "../utils/aiErrors";
 
@@ -13,7 +14,7 @@ const PER_CALL = 4; // keeps each call well inside the 180 s timeout
 
 /**
  * POST /admin/seed — adds the starter library of classic shers.
- * Idempotent: skips ones already present, does up to 5 per call, and
+ * Idempotent: skips ones already present, does a few per call, and
  * reports how many remain so the admin page can call it again.
  * @param {Request} _req - Express request
  * @param {Response} res - Express response
@@ -30,10 +31,13 @@ export async function seedClassicsHandler(_req: Request, res: Response) {
 
     const batch = missing.slice(0, PER_CALL);
     await Promise.all(batch.map(async ({id, c}) => {
-      const [embedding, tashreeh] = await Promise.all([
+      // One AI call per sher (beginner meaning); deeper levels and other
+      // languages are written on demand and cached.
+      const [embedding, beginner] = await Promise.all([
         createEmbedding(`${c.devanagari}\n${c.roman}\n${c.themes.join(" ")}`),
-        generateTashreehLevels(c.devanagari),
+        generateText(beginnerTashreehPrompt(c.devanagari)),
       ]);
+      const tashreeh = {beginner, intermediate: "", scholar: ""};
       await col.doc(id).set({
         devanagariText: c.devanagari,
         romanText: c.roman,

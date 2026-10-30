@@ -30,10 +30,78 @@ export function getGenAI(): GoogleGenerativeAI {
  * @return {string} Model name
  */
 export function modelName(): string {
+  if (fallback && Date.now() < fallback.until) return fallback.model;
+  return primaryModel();
+}
+
+/**
+ * The configured primary model.
+ * @return {string} Model name
+ */
+function primaryModel(): string {
   return process.env.GEMINI_MODEL || "gemini-3.8-flash";
 }
 
-let thinkingSupported = true;
+// Quotas are per model. When the primary model's quota runs out we switch to
+// another Flash model the key can use (GEMINI_FALLBACK_MODEL, or the best one
+// found by listing the key's models) for 15 minutes, then try primary again.
+let fallback: {model: string; until: number} | null = null;
+let fallbackCandidates: string[] | null = null;
+
+/**
+ * Lists generateContent-capable Flash/Pro models available to this key,
+ * best first, excluding the primary model.
+ * @return {Promise<string[]>} Model names
+ */
+async function listFallbacks(): Promise<string[]> {
+  if (fallbackCandidates) return fallbackCandidates;
+  const env = (process.env.GEMINI_FALLBACK_MODEL || "").split(",")
+    .map((m) => m.trim()).filter(Boolean);
+  let listed: string[] = [];
+  try {
+    const r = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
+      {headers: {"x-goog-api-key": process.env.GEMINI_API_KEY || ""}},
+    );
+    const j = await r.json() as {models?: Array<{
+      name: string; supportedGenerationMethods?: string[];
+    }>};
+    listed = (j.models || [])
+      .filter((m) => m.supportedGenerationMethods?.includes("generateContent"))
+      .map((m) => m.name.replace(/^models\//, ""))
+      .filter((n) => /flash|pro/.test(n) &&
+        !/tts|image|live|audio|embed|robotic|computer|thinking-exp/.test(n));
+  } catch (err) {
+    console.warn("Could not list Gemini models:", err);
+  }
+  const score = (n: string) => {
+    const v = Number((n.match(/(\d+(?:\.\d+)?)/) || ["0"])[0]);
+    return v * 10 + (/flash/.test(n) && !/lite/.test(n) ? 3 :
+      /lite/.test(n) ? 2 : 1) - (/preview|exp/.test(n) ? 0.5 : 0);
+  };
+  listed.sort((a, b) => score(b) - score(a));
+  fallbackCandidates = [...new Set([...env, ...listed])]
+    .filter((n) => n !== primaryModel());
+  console.log("Gemini fallback candidates:", fallbackCandidates.join(", "));
+  return fallbackCandidates;
+}
+
+/**
+ * Switches to the next fallback model after a quota error.
+ * @return {Promise<boolean>} true if a new model was selected
+ */
+async function switchModel(): Promise<boolean> {
+  const list = await listFallbacks();
+  const current = modelName();
+  const idx = list.indexOf(current);
+  const next = list[idx + 1];
+  if (!next) return false;
+  fallback = {model: next, until: Date.now() + 15 * 60_000};
+  console.warn(`Gemini quota on ${current}; switching to ${next}`);
+  return true;
+}
+
+const noThinking = new Set<string>();
 
 /**
  * Generation config shared by every call. Gemini 3.x Flash thinks at
@@ -47,7 +115,7 @@ export function genConfig(
   extra: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const level = (process.env.GEMINI_THINKING || "low").toLowerCase();
-  if (!thinkingSupported || level === "off") return {...extra};
+  if (noThinking.has(modelName()) || level === "off") return {...extra};
   return {...extra, thinkingConfig: {thinkingLevel: level}};
 }
 
@@ -70,11 +138,13 @@ export function getModel(extra: Record<string, unknown> = {}) {
  * our thinkingConfig (400), thinking is switched off and the call retried.
  * @param {Function} fn - Call to attempt (must rebuild the model inside)
  * @param {number} attempts - Max attempts
+ * @param {boolean} canSwitchModel - Allow switching generative model
  * @return {Promise<T>} Result of fn
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  attempts = 4,
+  attempts = 5,
+  canSwitchModel = true,
 ): Promise<T> {
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -84,13 +154,23 @@ export async function withRetry<T>(
       last = err;
       const m = String(err instanceof Error ? err.message : err)
         .toLowerCase();
-      if (thinkingSupported && m.includes("[400") && m.includes("thinking")) {
-        console.warn("thinkingConfig rejected by model; retrying without it");
-        thinkingSupported = false;
+      const model = modelName();
+      if (!noThinking.has(model) && m.includes("[400") &&
+          m.includes("thinking")) {
+        console.warn(`thinkingConfig rejected by ${model}; retrying without`);
+        noThinking.add(model);
+        continue;
+      }
+      // Quota used up (429 / RESOURCE_EXHAUSTED) or model not available to
+      // this key (404): move to another model and retry straight away.
+      const quota = /\[429|resource_exhausted|quota/.test(m);
+      const missing = m.includes("[404") && m.includes("model");
+      if ((quota || missing) && canSwitchModel && i < attempts - 1 &&
+          await switchModel()) {
         continue;
       }
       const transient = new RegExp(
-        "\\[(429|500|503|504)|unavailable|high demand|overloaded|" +
+        "\\[(500|503|504)|unavailable|high demand|overloaded|" +
         "econnreset|etimedout|fetch failed",
       ).test(m);
       if (!transient || i === attempts - 1) throw err;

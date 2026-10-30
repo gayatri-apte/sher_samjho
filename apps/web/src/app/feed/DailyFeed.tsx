@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mic2, Shuffle, Sparkles } from "lucide-react";
 import TappableSher from "../../components/TappableSher";
+import TashreehPanel from "../../components/TashreehPanel";
 import Page, { Card, ErrorNote } from "../../components/ui/Page";
 import SpeakButton from "../../components/voice/SpeakButton";
 import { api } from "../../config/api";
@@ -78,12 +79,14 @@ export default function DailyFeed() {
             </button>
           </div>
 
-          {meaning && (
-            <details className="mt-6 rounded-2xl bg-[#fbeee0] px-4 py-3">
-              <summary className="cursor-pointer text-sm font-medium text-[#5a2e14]">Tashreeh</summary>
-              <p lang="hi" className="mt-2 font-deva leading-relaxed text-[#5a3a28] whitespace-pre-wrap">{meaning}</p>
-            </details>
-          )}
+          <div className="mt-6 rounded-2xl bg-[#fbeee0] px-4 py-4">
+            <TashreehPanel
+              key={sher.id}
+              text={sher.devanagariText ?? ""}
+              textHash={sher.id}
+              initial={typeof sher.tashreeh === "object" && sher.tashreeh ? (sher.tashreeh as Record<string, string>) : meaning || null}
+            />
+          </div>
 
           <button
             type="button"

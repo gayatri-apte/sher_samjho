@@ -1,6 +1,7 @@
 import type {Request, Response} from "express";
 import {generateSpeech} from "../utils/tts";
 import {sendError} from "../utils/aiErrors";
+import {LANGUAGES} from "../prompts/tashreeh.lang";
 
 /**
  * Returns synthesized MP3 audio.
@@ -20,7 +21,9 @@ export async function ttsHandler(req: Request, res: Response) {
       return;
     }
     const rate = Number(req.body?.rate) || 0.9;
-    const audio = await generateSpeech(text, rate);
+    const lang = String(req.body?.lang || "");
+    const audio = await generateSpeech(text, rate,
+      LANGUAGES[lang]?.tts);
 
     res.set({
       "Content-Type": "audio/mpeg",

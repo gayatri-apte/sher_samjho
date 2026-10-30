@@ -13,17 +13,17 @@ export function stopSpeaking() {
  * Speaks text through the backend TTS (Urdu/Hindi voice picked by script).
  * rate 0.6 = slow learner mode. Resolves when playback ends.
  */
-export async function speak(text: string, rate = 0.9): Promise<void> {
+export async function speak(text: string, rate = 0.9, lang?: string): Promise<void> {
   const clean = text.trim();
   if (!clean) return;
   stopSpeaking();
-  const key = `${rate}|${clean}`;
+  const key = `${lang ?? ""}|${rate}|${clean}`;
   let url = cache.get(key);
   if (!url) {
     const res = await fetch(api.tts, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: clean, rate }),
+      body: JSON.stringify({ text: clean, rate, lang }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

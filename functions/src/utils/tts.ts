@@ -24,8 +24,15 @@ const CACHE_MAX = 200;
  * @return {string} BCP-47 language code
  */
 function languageFor(text: string): string {
-  if (/[؀-ۿ]/.test(text)) return "ur-IN";
-  if (detectScript(text) === "devanagari" && /[ऀ-ॿ]/.test(text)) {
+  if (/[\u0600-\u06FF]/.test(text)) return "ur-IN";
+  const scripts: Array<[RegExp, string]> = [
+    [/[\u0C00-\u0C7F]/, "te-IN"], [/[\u0B80-\u0BFF]/, "ta-IN"],
+    [/[\u0980-\u09FF]/, "bn-IN"], [/[\u0A80-\u0AFF]/, "gu-IN"],
+    [/[\u0C80-\u0CFF]/, "kn-IN"], [/[\u0D00-\u0D7F]/, "ml-IN"],
+    [/[\u0A00-\u0A7F]/, "pa-IN"],
+  ];
+  for (const [re, code] of scripts) if (re.test(text)) return code;
+  if (detectScript(text) === "devanagari" && /[\u0900-\u097F]/.test(text)) {
     return "hi-IN";
   }
   return "en-IN";
@@ -35,15 +42,19 @@ function languageFor(text: string): string {
  * Generates MP3 audio for poetry or a single word.
  * @param {string} text - Text to speak (max 1500 chars)
  * @param {number} rate - Speaking rate (0.5 slow learner mode … 1.1)
+ * @param {string} languageCode - Optional voice language, e.g. mr-IN
  * @return {Promise<Buffer>} MP3 bytes
  */
 export async function generateSpeech(
   text: string,
   rate = 0.9,
+  languageCode?: string,
 ): Promise<Buffer> {
   const clean = text.replace(/\s+\n/g, "\n").trim().slice(0, 1500);
   const speakingRate = Math.min(1.2, Math.max(0.5, rate));
-  const lang = languageFor(clean);
+  // Marathi shares Devanagari with Hindi, so the caller may name the voice.
+  const lang = languageCode && /^[a-z]{2}-IN$/.test(languageCode) ?
+    languageCode : languageFor(clean);
   const key = `${lang}|${speakingRate}|${clean}`;
   const hit = cache.get(key);
   if (hit) return hit;
@@ -63,7 +74,9 @@ export async function generateSpeech(
     audio = await synth(lang);
   } catch (err) {
     // Urdu voice not enabled in this project/region → fall back to Hindi.
-    if (lang === "ur-IN") audio = await synth("hi-IN");
+    // Voice not available for this language → closest fallback.
+    if (lang === "ur-IN" || lang === "mr-IN") audio = await synth("hi-IN");
+    else if (lang !== "en-IN") audio = await synth("en-IN");
     else throw err;
   }
 

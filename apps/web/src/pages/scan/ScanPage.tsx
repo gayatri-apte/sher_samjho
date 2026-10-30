@@ -9,11 +9,11 @@ import { saveHistory, lookupDictionary, saveVocabulary } from "../../services/fu
 import PoetryText from "../../components/PoetryText";
 import WordModal from "../../components/WordModal";
 import SpeakButton from "../../components/voice/SpeakButton";
+import TashreehPanel from "../../components/TashreehPanel";
 import Page, { Card, ErrorNote } from "../../components/ui/Page";
 import { useAuth } from "../../hooks/useAuth";
 
 type ScriptView = "dev" | "urdu" | "roman" | "all";
-type Level = "beginner" | "intermediate" | "scholar";
 
 const POETS = [
   "Mirza Ghalib", "Mir Taqi Mir", "Allama Iqbal", "Momin Khan Momin", "Daagh Dehlvi",
@@ -41,7 +41,6 @@ export default function ScanPage() {
   const { user } = useAuth();
   const [image, setImage] = useState<File | null>(null);
   const [script, setScript] = useState<ScriptView>("all");
-  const [level, setLevel] = useState<Level>("beginner");
   const [poet, setPoet] = useState("");
   const { result, devanagariText, romanText, textHash, loading, error, analyze, reset } = useOCR();
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -69,7 +68,10 @@ export default function ScanPage() {
       : typeof result.tashreeh === "object"
         ? result.tashreeh
         : { beginner: result.tashreeh, intermediate: result.tashreeh, scholar: result.tashreeh };
-  const tashreehText = levels?.[level] ?? levels?.beginner ?? "";
+  // Hindi beginner arrives with the scan; other depths and languages are
+  // written on demand inside TashreehPanel. We save whichever is showing.
+  const [shownTashreeh, setShownTashreeh] = useState("");
+  const tashreehText = shownTashreeh || levels?.beginner || "";
 
   async function handleWordClick(word: string) {
     const w = word.replace(/[।,.!?؟،۔"'“”]/g, "").trim();
@@ -119,6 +121,7 @@ export default function ScanPage() {
   }
 
   function startOver() {
+    setShownTashreeh("");
     setImage(null);
     reset();
   }
@@ -146,7 +149,7 @@ export default function ScanPage() {
                   onClick={() => pickSample(s)}
                   className="group rounded-xl overflow-hidden border border-[#ecd6bd] bg-[#fff8f0] hover:border-[#c26a3b] text-left"
                 >
-                  <img src={`/samples/${s.file}`} alt={s.label} loading="lazy" className="w-full aspect-[4/5] object-cover object-center group-hover:opacity-90" />
+                  <img src={`/samples/${s.file}`} alt={s.label} loading="lazy" className="w-full aspect-[16/9] object-cover object-center group-hover:opacity-90" />
                   <span className={`block px-2 py-1.5 text-[11px] leading-tight text-[#5a3a28] truncate ${s.urdu ? "font-urdu text-right" : ""}`} dir={s.urdu ? "rtl" : undefined}>
                     {s.label}
                   </span>
@@ -188,7 +191,7 @@ export default function ScanPage() {
               </button>
             </div>
             {loading && (
-              <p className="text-xs text-[#94725a]">First scans take ~15–30 s (OCR → transliteration → 3 levels of tashreeh).</p>
+              <p className="text-xs text-[#94725a]">A new page takes ~15–30 s: reading → transliteration → explanation.</p>
             )}
             {error && <ErrorNote>{error}</ErrorNote>}
           </Card>
@@ -258,32 +261,15 @@ export default function ScanPage() {
             </Card>
           )}
 
-          {tashreehText && (
+          {devanagariText && (
             <Card>
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <h2 className="font-semibold text-[#5a2e14]">Tashreeh</h2>
-                <div className="inline-flex rounded-full border border-[#e2c9ad] p-0.5 bg-[#fffaf4]" role="tablist">
-                  {(["beginner", "intermediate", "scholar"] as Level[]).map((l) => (
-                    <button
-                      key={l}
-                      role="tab"
-                      aria-selected={level === l}
-                      onClick={() => setLevel(l)}
-                      className={`px-3 py-1 rounded-full text-xs capitalize ${level === l ? "bg-[#c26a3b] text-white" : "text-[#5a321c]"}`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                <span className="ml-auto"><SpeakButton text={tashreehText} compact /></span>
-              </div>
-              <p lang="hi" className="font-deva text-lg leading-relaxed text-[#3b2419] whitespace-pre-wrap">
-                {tashreehText}
-              </p>
-              <p className="mt-3 text-xs text-[#b08a6a]">
-                AI interpretation · confidence {Math.round((result?.confidence ?? 0.85) * 100)}% · other readings exist
-              </p>
-
+              <TashreehPanel
+                key={textHash ?? devanagariText}
+                text={devanagariText}
+                textHash={textHash}
+                initial={levels}
+                onShown={setShownTashreeh}
+              />
               <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[#f0d9c2] pt-5">
                 <label htmlFor="poet" className="text-sm text-[#94725a]">Poet</label>
                 <select

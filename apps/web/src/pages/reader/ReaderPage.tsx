@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mic2, Sparkles } from "lucide-react";
 import SpeakButton from "../../components/voice/SpeakButton";
 import TappableSher from "../../components/TappableSher";
+import TashreehPanel from "../../components/TashreehPanel";
 
 export default function ReaderPage() {
   const navigate = useNavigate();
@@ -69,12 +70,9 @@ export default function ReaderPage() {
           )}
         </div>
 
-        {explanation && (
-          <div className="mt-8 text-left rounded-3xl bg-[#fff7ef]/95 border border-[#e2c9ad] px-6 py-5">
-            <h2 className="font-semibold text-[#5a2e14] mb-2">Tashreeh</h2>
-            <p lang="hi" className="font-deva leading-relaxed text-[#5a3a28] whitespace-pre-wrap">{explanation}</p>
-          </div>
-        )}
+        <div className="mt-8 text-left rounded-3xl bg-[#fff7ef]/95 border border-[#e2c9ad] px-6 py-5">
+          <TashreehPanel key={sherId ?? text} text={text} textHash={sherId} initial={explanation || null} />
+        </div>
       </div>
     </div>
   );
